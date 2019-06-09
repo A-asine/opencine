@@ -32,7 +32,7 @@ namespace OC
             bool processed = false;
 
             uint16_t* _targetData;
-            uint8_t* _sourceData;
+            std::vector<uint8_t*> _sourceData;
 
             mlv_file_hdr_t ReadHeader(uint8_t* buffer, unsigned int& bufferPosition);
             mlv_hdr_t ReadBlockHeader(uint8_t* buffer, unsigned int& bufferPosition);

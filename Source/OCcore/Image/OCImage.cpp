@@ -80,34 +80,34 @@ unsigned int OC::Image::OCImage::DataLength() const
 
 void OC::Image::OCImage::SetRedChannel(void *redData)
 {
-    _dataLength = _width * _height * sizeof(unsigned short);
+    //_dataLength = _width * _height * sizeof(unsigned short);
 
-    if(_redData == nullptr)
-    {
-        _redData = new unsigned short[_dataLength];
-    }
+    //if(_redData == nullptr)
+    //{
+        _redData = redData;//new unsigned short[_dataLength];
+   // }
 
-    memmove(_redData, redData, _dataLength);
+    //memmove(_redData, redData, _dataLength);
 }
 
 void OC::Image::OCImage::SetGreenChannel(void *greenData)
 {
-    if(_greenData == nullptr)
-    {
-        _greenData = new unsigned short[_dataLength];
-    }
+    //if(_greenData == nullptr)
+    //{
+        _greenData = greenData;//new unsigned short[_dataLength];
+    //}
 
-    memmove(_greenData, greenData, _dataLength);
+    //memmove(_greenData, greenData, _dataLength);
 }
 
 void OC::Image::OCImage::SetBlueChannel(void *blueData)
 {
-    if(_blueData == nullptr)
-    {
-        _blueData = new unsigned short[_dataLength];
-    }
+    //if(_blueData == nullptr)
+    //{
+        _blueData = blueData; //new unsigned short[_dataLength];
+    //}
 
-    memmove(_blueData, blueData, _dataLength);
+    //memmove(_blueData, blueData, _dataLength);
 }
 
 void OC::Image::OCImage::SetBayerPattern(OC::Image::BayerPattern pattern)

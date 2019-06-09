@@ -64,20 +64,22 @@ void ProcessingPresenter::Show()
 
     OC_LOG_INFO("Loading finished");
 
-    OC_LOG_INFO("Demosaicing");
-    if(_currentDebayerProcessor != 6)
+    RawPoolAllocator* allocator = reinterpret_cast<RawPoolAllocator*>(poolAllocator);
+        
+    for(int index = 0; index < allocator->GetFrameCount(); index = index + 3)
     {
-        _debayerProcessors[_currentDebayerProcessor]->Process(*_image.get());
+      _image->SetRedChannel(allocator->GetData(index + 0));
+      _image->SetGreenChannel(allocator->GetData(index + 1));
+      _image->SetBlueChannel(allocator->GetData(index + 2));
+      
+      auto diffTime = std::chrono::high_resolution_clock::now() - start;
+      auto frameTime = std::chrono::duration_cast<std::chrono::milliseconds>(diffTime).count();
+
+      std::string frameTimeLog = "Frame loading time: " + std::to_string(frameTime) + "ms";
+      OC_LOG_INFO(frameTimeLog);
+
+      _view->SetFrame(*_image.get());
     }
-    OC_LOG_INFO("Demosaicing finished");
-
-    auto diffTime = std::chrono::high_resolution_clock::now() - start;
-    auto frameTime = std::chrono::duration_cast<std::chrono::milliseconds>(diffTime).count();
-
-    std::string frameTimeLog = "Frame loading time: " + std::to_string(frameTime) + "ms";
-    OC_LOG_INFO(frameTimeLog);
-
-    _view->SetFrame(*_image.get());
 }
 
 // TODO: Check how to remove allFormats, as it is used as workaround for filter selection in QFileDialog

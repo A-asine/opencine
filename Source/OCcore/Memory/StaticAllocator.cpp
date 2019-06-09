@@ -21,7 +21,7 @@ RawPoolAllocator::~RawPoolAllocator()
 
 void* RawPoolAllocator::Allocate(size_t size/*, size_t align*/)
 {
-	_pointerMap.insert(std::pair<size_t, size_t>(_currentOffset, size));
+	_pointerMap.push_back(std::make_pair(_currentOffset, size));
 	
 	void* ptr = _mem + _currentOffset;
 	_currentOffset += size;
@@ -29,8 +29,20 @@ void* RawPoolAllocator::Allocate(size_t size/*, size_t align*/)
 	return ptr;
 }
 
+void* RawPoolAllocator::GetData(int index)
+{
+    void* ptr = &_mem[_pointerMap[index].first];
+    return ptr;
+}
+ 
+int RawPoolAllocator::GetFrameCount()
+{
+    return (_pointerMap.size());
+}
+
 void RawPoolAllocator::Deallocate(void* p)
 {
+
 }
 
 size_t RawPoolAllocator::allocated_size(void* p)

@@ -107,11 +107,11 @@ mlv_vidf_hdr_t MLVLoader::ReadVIDF(uint8_t* buffer, unsigned int& bufferPosition
     // uint8_t	frameData
 
     // FIXME: Remove "processed" when frame loading is implemented, used here to get only first frame
-    if(processed == false)
-    {
-        _sourceData = &buffer[bufferPosition + block.frameSpace];
-        processed = true;
-    }
+   // if(processed == false)
+   //{
+        _sourceData.push_back(&buffer[bufferPosition + block.frameSpace]);
+      //  processed = true;
+   // }
 
     bufferPosition += blockHeader.blockSize - (sizeof(mlv_vidf_hdr_t) + sizeof(mlv_hdr_t));
 
@@ -189,37 +189,44 @@ void MLVLoader::Load(uint8_t* data, unsigned int size, Image::OCImage& image, IA
             }
         }
     }
-
+    
+    for(int index = 0; index < _sourceData.size(); index++)
+    {  
     // TODO: Move to ImageProvider, so it's not instantiated several times
-    std::unique_ptr<BayerFrameDownscaler> frameProcessor(new BayerFrameDownscaler());
+      std::unique_ptr<BayerFrameDownscaler> frameProcessor(new BayerFrameDownscaler());
 
-    unsigned int dataSize = blockRAWI.xRes * blockRAWI.yRes;
-    image.SetWidth(blockRAWI.xRes);
-    image.SetHeight(blockRAWI.yRes);
-    image.SetBayerPattern(BayerPattern::RGGB);
+      unsigned int dataSize = blockRAWI.xRes * blockRAWI.yRes;
+      image.SetWidth(blockRAWI.xRes);
+      image.SetHeight(blockRAWI.yRes);
+      image.SetBayerPattern(BayerPattern::RGGB);
 
-    image.SetRedChannel(allocator.Allocate(dataSize));
-    image.SetGreenChannel(allocator.Allocate(dataSize));
-    image.SetBlueChannel(allocator.Allocate(dataSize));
+      image.SetRedChannel(allocator.Allocate(dataSize));
+      image.SetGreenChannel(allocator.Allocate(dataSize));
+      image.SetBlueChannel(allocator.Allocate(dataSize));
 
-    unsigned int imageDataSize = 0;
-    ImageFormat imageFormat = ImageFormat::Integer12;
-    switch(blockRAWI.rawInfo.bits_per_pixel)
-    {
+      unsigned int imageDataSize = 0;
+      ImageFormat imageFormat = ImageFormat::Integer12;
+      switch(blockRAWI.rawInfo.bits_per_pixel)
+      {
         case 14:
             imageFormat = ImageFormat::Integer14;
             image.SetFormat(static_cast<ImageFormat>(blockRAWI.rawInfo.bits_per_pixel));
             imageDataSize = static_cast<unsigned int>(dataSize * 1.75f); // 14bit / 8 bit
             break;
-    }
+      }
+      
+      uint8_t* frameData = new uint8_t[imageDataSize];
+      
+      std::memcpy(frameData, _sourceData[index], imageDataSize);
+      
+      SwapEndianess16BitArray(frameData, imageDataSize);
 
-    SwapEndianess16BitArray(_sourceData, imageDataSize);
-
-    frameProcessor->SetData(_sourceData, image, imageFormat);
+      frameProcessor->SetData(frameData, image, imageFormat);
     // frameProcessor->SetLinearizationData(linearizationTable, linearizationLength);
-    frameProcessor->Process();
+      frameProcessor->Process();
 
-    image.SetRedChannel(frameProcessor->GetDataRed());
-    image.SetGreenChannel(frameProcessor->GetDataGreen());
-    image.SetBlueChannel(frameProcessor->GetDataBlue());
+     // image.SetRedChannel(frameProcessor->GetDataRed());
+     // image.SetGreenChannel(frameProcessor->GetDataGreen());
+     // image.SetBlueChannel(frameProcessor->GetDataBlue());
+    }
 }
