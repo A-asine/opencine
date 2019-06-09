@@ -1,21 +1,18 @@
 #include "OCImage.h"
 
 OC::Image::OCImage::OCImage() :
-        _width(0),
-        _height(0),
-        _pattern(BayerPattern::RGGB),
-        _redData(nullptr),
-        _greenData(nullptr),
-        _blueData(nullptr),
-        _dataLength(0)
+    _width(0),
+    _height(0),
+    _pattern(BayerPattern::RGGB),
+    _redData(nullptr),
+    _greenData(nullptr),
+    _blueData(nullptr),
+    _dataLength(0)
 {
 }
 
 OC::Image::OCImage::~OCImage()
 {
-    delete[](short *) _redData;
-    delete[](short *) _greenData;
-    delete[](short *) _blueData;
 }
 
 void OC::Image::OCImage::SetWidth(unsigned int width)
@@ -80,34 +77,17 @@ unsigned int OC::Image::OCImage::DataLength() const
 
 void OC::Image::OCImage::SetRedChannel(void *redData)
 {
-    //_dataLength = _width * _height * sizeof(unsigned short);
-
-    //if(_redData == nullptr)
-    //{
-        _redData = redData;//new unsigned short[_dataLength];
-   // }
-
-    //memmove(_redData, redData, _dataLength);
+    _redData = redData;//new unsigned short[_dataLength];
 }
 
 void OC::Image::OCImage::SetGreenChannel(void *greenData)
 {
-    //if(_greenData == nullptr)
-    //{
-        _greenData = greenData;//new unsigned short[_dataLength];
-    //}
-
-    //memmove(_greenData, greenData, _dataLength);
+    _greenData = greenData;//new unsigned short[_dataLength];
 }
 
 void OC::Image::OCImage::SetBlueChannel(void *blueData)
 {
-    //if(_blueData == nullptr)
-    //{
-        _blueData = blueData; //new unsigned short[_dataLength];
-    //}
-
-    //memmove(_blueData, blueData, _dataLength);
+    _blueData = blueData; //new unsigned short[_dataLength];
 }
 
 void OC::Image::OCImage::SetBayerPattern(OC::Image::BayerPattern pattern)

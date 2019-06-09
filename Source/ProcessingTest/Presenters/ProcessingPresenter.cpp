@@ -11,6 +11,8 @@
 #include <QFileInfo>
 #include <QStringList>
 #include <QThread>
+#include <QTime>
+#include <QCoreApplication>
 
 #include <Image/BilinearDebayer.h>
 #include <Image/BilinearDebayerOMP.h>
@@ -68,17 +70,30 @@ void ProcessingPresenter::Show()
         
     for(int index = 0; index < allocator->GetFrameCount(); index = index + 3)
     {
-      _image->SetRedChannel(allocator->GetData(index + 0));
-      _image->SetGreenChannel(allocator->GetData(index + 1));
-      _image->SetBlueChannel(allocator->GetData(index + 2));
-      
-      auto diffTime = std::chrono::high_resolution_clock::now() - start;
-      auto frameTime = std::chrono::duration_cast<std::chrono::milliseconds>(diffTime).count();
+        _view->EnableRendering(false);
+        _image->SetRedChannel(allocator->GetData(index + 0));
+        _image->SetGreenChannel(allocator->GetData(index + 1));
+        _image->SetBlueChannel(allocator->GetData(index + 2));
 
-      std::string frameTimeLog = "Frame loading time: " + std::to_string(frameTime) + "ms";
-      OC_LOG_INFO(frameTimeLog);
+        auto diffTime = std::chrono::high_resolution_clock::now() - start;
+        auto frameTime = std::chrono::duration_cast<std::chrono::milliseconds>(diffTime).count();
 
-      _view->SetFrame(*_image.get());
+        std::string frameTimeLog = "Frame loading time: " + std::to_string(frameTime) + "ms";
+        OC_LOG_INFO(frameTimeLog);
+        
+        _view->SetFrame(*_image.get());
+        _view->EnableRendering(true);
+        
+         //std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+        QTime dieTime= QTime::currentTime().addMSecs(30);
+        while (QTime::currentTime() < dieTime)
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+
+        if(index == 7 * 3)
+        {
+            index = 0;
+        }
     }
 }
 
@@ -118,7 +133,7 @@ void ProcessingPresenter::OpenRAWFile()
 
     Show();
 
-    _view->EnableRendering(true);
+    //_view->EnableRendering(true);
 }
 
 void ProcessingPresenter::ChangeDebayerMethod(unsigned int debayerMethod)

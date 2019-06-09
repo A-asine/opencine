@@ -48,7 +48,8 @@ void ProcessingView::paintEvent(QPaintEvent *)
 void ProcessingView::SetFrame(OCImage &image)
 {
     testImage = &image;
-
+     
+    this->repaint();
     ui->dumpPNGButton->setEnabled(true);
 }
 
