@@ -67,8 +67,10 @@ void ProcessingPresenter::Show()
     OC_LOG_INFO("Loading finished");
 
     RawPoolAllocator* allocator = reinterpret_cast<RawPoolAllocator*>(poolAllocator);
-        
-    for(int index = 0; index < allocator->GetFrameCount(); index = index + 3)
+    
+    unsigned int frameCount = allocator->GetFrameCount() / 3;
+    
+    for(unsigned int index = 0; index < allocator->GetFrameCount(); index = index + 3)
     {
         _view->EnableRendering(false);
         _image->SetRedChannel(allocator->GetData(index + 0));
@@ -90,10 +92,12 @@ void ProcessingPresenter::Show()
         while (QTime::currentTime() < dieTime)
             QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
 
-        if(index == 7 * 3)
+        if(index == frameCount * 3)
         {
             index = 0;
         }
+        
+        
     }
 }
 

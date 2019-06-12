@@ -6,6 +6,8 @@
 #define MLVLOADER_H
 
 #include <vector>
+#include <functional>
+#include <unordered_map>
 
 #include <Memory/StaticAllocator.h>
 
@@ -14,39 +16,45 @@
 
 #include "mlv_structure_mod.h"
 
+
+typedef std::function < void(uint8_t*, unsigned int&, mlv_hdr_t& )> MLVFunc;
+
+
+// void is return type, uint8_t* is file data, unsigned int is offset to filedata, mlv_hdr_t is block of MLV 
+
 namespace OC
 {
     namespace DataProvider
     {
         class MLVLoader : public IImageLoader
-        {
-
-            // MLVI string, inversion is not used
-#define MLVI_MAGIC 0x49564c4d
-            // NOTE: right to left, eg. BlockType_RAWI 0x49574152 -> IWAR
-#define BlockType_RAWI 0x49574152
-#define BlockType_VIDF 0x46444956
-#define BlockType_NULL 0x4c4c554e
-
-            // FIXME: Just a temporary variable, remove after succesful tests
-            bool processed = false;
-
+        {   
+            #define MLVI_MAGIC 0x49564c4d
+        
+            mlv_rawi_hdr_t blockRAWI;
+            mlv_vidf_hdr_t blockVIDF;
+            // more blocks, when required
+            
             uint16_t* _targetData;
-            std::vector<uint8_t*> _sourceData;
+            std::vector<unsigned int> _sourceData;
 
             mlv_file_hdr_t ReadHeader(uint8_t* buffer, unsigned int& bufferPosition);
             mlv_hdr_t ReadBlockHeader(uint8_t* buffer, unsigned int& bufferPosition);
-            mlv_rawi_hdr_t ReadRAWI(uint8_t* buffer, unsigned int& bufferPosition, mlv_hdr_t& /*blockHeader*/);
             raw_info ReadRawInfo(uint8_t* buffer, unsigned int& bufferPosition);
-            mlv_vidf_hdr_t ReadVIDF(uint8_t* buffer, unsigned int& bufferPosition, mlv_hdr_t& blockHeader);
-
+            
+            void ReadRAWI(uint8_t* buffer, unsigned int& bufferPosition, mlv_hdr_t& blockHeader);
+            void ReadVIDF(uint8_t* buffer, unsigned int& bufferPosition, mlv_hdr_t& blockHeader);
+            
             void ProcessTags();
 
         public:
             MLVLoader();
-
+             
+            std::unordered_map<std::string, MLVFunc> mlvFunc; 
+            
             void Load(uint8_t* data, unsigned int size, Image::OCImage& image, IAllocator& allocator) override;
             bool CheckFormat(uint8_t* data, std::streamsize size);
+            void InitOCImage(Image::OCImage& image, uint16_t width, uint16_t height, uint32_t bits_per_pixel,
+                              unsigned int& imageDataSize, Image::ImageFormat& imageFormat);
         };
     }
 }
