@@ -11,7 +11,7 @@
 
 TEST_CASE("SHOODAK Benchmark", "[OC::Image]")
 {
-    IAllocator* poolAllocator = new RawPoolAllocator(50 * 1024 * 1024);
+    IAllocator* poolAllocator = new RawPoolAllocator();
 
     std::unique_ptr<OC::Image::OCImage> image(new OC::Image::OCImage());
 

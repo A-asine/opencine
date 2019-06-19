@@ -15,6 +15,8 @@
 using namespace OC::DataProvider;
 using namespace OC::Image;
 
+IImageLoader *imageLoader = nullptr;
+
 IImageLoader* ImageProvider::FindSuitableLoader(uint8_t* data, std::streamsize size) const
 {
     for(std::pair<OC::Image::FileFormat, std::shared_ptr<IImageLoader>> entry : _imageLoaders)
@@ -30,7 +32,7 @@ IImageLoader* ImageProvider::FindSuitableLoader(uint8_t* data, std::streamsize s
 }
 
 ImageProvider::ImageProvider()
-{
+{  
     std::shared_ptr<TIFFLoader> tiffLoader = std::make_shared<TIFFLoader>();
     _imageLoaders.insert(std::make_pair(FileFormat::TIFF, tiffLoader));
     _imageLoaders.insert(std::make_pair(FileFormat::DNG, tiffLoader));
@@ -82,8 +84,6 @@ void ImageProvider::Load(std::string fileName, FileFormat format, OCImage& image
     OC_LOG_INFO(log);
 
     start = std::chrono::high_resolution_clock::now();
-    IImageLoader* imageLoader = nullptr;
-
     // TODO: Add error handling to prevent crash when no suitable loader was found
     if(format == FileFormat::Unknown)
     {
@@ -105,6 +105,15 @@ void ImageProvider::Load(std::string fileName, FileFormat format, OCImage& image
 
     log = "File processing: " + std::to_string(frameTime) + "ms";
     OC_LOG_INFO(log);
-
-    delete[] fileData;
 }
+
+void ImageProvider::ProcessFrame( unsigned int frameNumber, OCImage& image, IAllocator& allocator) const
+{    
+    imageLoader->ProcessFrame(frameNumber, image, allocator);
+}
+
+
+
+
+
+

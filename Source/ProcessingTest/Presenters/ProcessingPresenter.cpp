@@ -58,47 +58,33 @@ void ProcessingPresenter::Show()
 {
     auto start = std::chrono::high_resolution_clock::now();
 
-    IAllocator* poolAllocator = new RawPoolAllocator(150 * 1024 * 1024);
+    IAllocator* poolAllocator = new RawPoolAllocator();
 
     OC_LOG_INFO("Loading image");
     // File format is set to "unknown" to let OC determine it automatically
     provider->Load(_currentFilePath, FileFormat::Unknown, *_image.get(), *poolAllocator);
 
     OC_LOG_INFO("Loading finished");
-
+    
     RawPoolAllocator* allocator = reinterpret_cast<RawPoolAllocator*>(poolAllocator);
     
-    unsigned int frameCount = allocator->GetFrameCount() / 3;
+    unsigned int frameCount = allocator->GetFrameCount();
     
-    for(unsigned int index = 0; index < allocator->GetFrameCount(); index = index + 3)
+    for(unsigned int frameNumber = 1; frameNumber < frameCount; frameNumber++)
     {
-        _view->EnableRendering(false);
-        _image->SetRedChannel(allocator->GetData(index + 0));
-        _image->SetGreenChannel(allocator->GetData(index + 1));
-        _image->SetBlueChannel(allocator->GetData(index + 2));
-
-        auto diffTime = std::chrono::high_resolution_clock::now() - start;
-        auto frameTime = std::chrono::duration_cast<std::chrono::milliseconds>(diffTime).count();
-
-        std::string frameTimeLog = "Frame loading time: " + std::to_string(frameTime) + "ms";
-        OC_LOG_INFO(frameTimeLog);
+      _view->EnableRendering(false);
         
-        _view->SetFrame(*_image.get());
-        _view->EnableRendering(true);
+      provider->ProcessFrame(frameNumber, *_image.get(), *poolAllocator); 
         
-         //std::this_thread::sleep_for(std::chrono::milliseconds(500));
+      _view->SetFrame(*_image.get());
+      _view->EnableRendering(true);
+        
+    //std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-        QTime dieTime= QTime::currentTime().addMSecs(30);
-        while (QTime::currentTime() < dieTime)
-            QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
-
-        if(index == frameCount * 3)
-        {
-            index = 0;
-        }
-        
-        
-    }
+      QTime dieTime= QTime::currentTime().addMSecs(30);
+      while (QTime::currentTime() < dieTime)
+      QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+    }   
 }
 
 // TODO: Check how to remove allFormats, as it is used as workaround for filter selection in QFileDialog

@@ -247,9 +247,9 @@ void TIFFLoader::PreProcess(unsigned char* data, OCImage& image) const
     std::unique_ptr<BayerFramePreProcessor> frameProcessor(new BayerFramePreProcessor());
 
     unsigned int dataSize = image.Width() * image.Height();
-    image.SetRedChannel(_allocator->Allocate(dataSize));
-    image.SetGreenChannel(_allocator->Allocate(dataSize));
-    image.SetBlueChannel(_allocator->Allocate(dataSize));
+    image.SetRedChannel(_allocator->Allocate(1, dataSize));
+    image.SetGreenChannel(_allocator->Allocate(1, dataSize));
+    image.SetBlueChannel(_allocator->Allocate(1, dataSize));
 
     frameProcessor->SetData(&data[_imageDataOffset], image, image.Format());
 
@@ -266,3 +266,12 @@ void TIFFLoader::PreProcess(unsigned char* data, OCImage& image) const
     image.SetGreenChannel(frameProcessor->GetDataGreen());
     image.SetBlueChannel(frameProcessor->GetDataBlue());
 }
+
+void TIFFLoader::ProcessFrame(unsigned int frameNumber, OCImage& image, IAllocator& allocator)
+{
+
+   // add implementation
+}
+
+
+

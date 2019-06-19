@@ -34,9 +34,10 @@ namespace OC
             mlv_vidf_hdr_t blockVIDF;
             // more blocks, when required
             
-            uint16_t* _targetData;
+            uint8_t* _targetData;
             std::vector<unsigned int> _sourceData;
-
+            std::unordered_map<std::string, MLVFunc> mlvFunc; 
+               
             mlv_file_hdr_t ReadHeader(uint8_t* buffer, unsigned int& bufferPosition);
             mlv_hdr_t ReadBlockHeader(uint8_t* buffer, unsigned int& bufferPosition);
             raw_info ReadRawInfo(uint8_t* buffer, unsigned int& bufferPosition);
@@ -45,16 +46,17 @@ namespace OC
             void ReadVIDF(uint8_t* buffer, unsigned int& bufferPosition, mlv_hdr_t& blockHeader);
             
             void ProcessTags();
-
-        public:
-            MLVLoader();
-             
-            std::unordered_map<std::string, MLVFunc> mlvFunc; 
             
-            void Load(uint8_t* data, unsigned int size, Image::OCImage& image, IAllocator& allocator) override;
-            bool CheckFormat(uint8_t* data, std::streamsize size);
             void InitOCImage(Image::OCImage& image, uint16_t width, uint16_t height, uint32_t bits_per_pixel,
                               unsigned int& imageDataSize, Image::ImageFormat& imageFormat);
+  
+        public:
+            MLVLoader();
+            
+            void Load(uint8_t* data, unsigned int size, Image::OCImage& image, IAllocator& allocator) override;
+            void ProcessFrame(unsigned int frameNumber, Image::OCImage& image, IAllocator& allocator) override;
+            
+            bool CheckFormat(uint8_t* data, std::streamsize size);
         };
     }
 }

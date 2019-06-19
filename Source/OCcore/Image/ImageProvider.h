@@ -38,6 +38,7 @@ namespace OC
 
             bool ReadBinaryFile(std::string fileName, std::streamsize& length, unsigned char*& fileData) const;
             void Load(std::string fileName, OC::Image::FileFormat format, OC::Image::OCImage& image, IAllocator& allocator) const;
+            void ProcessFrame(unsigned int frameNumber, OC::Image::OCImage& image, IAllocator& allocator) const;
         };
     }
 }

@@ -96,7 +96,6 @@ void MLVLoader::ReadRAWI(uint8_t* buffer, unsigned int& bufferPosition, mlv_hdr_
 
 void MLVLoader::ReadVIDF(uint8_t* buffer, unsigned int& bufferPosition, mlv_hdr_t& blockHeader)
 {
-
     blockVIDF.frameNumber = GetUInt32(&buffer[bufferPosition], bufferPosition);
     blockVIDF.cropPosX    = GetUInt16(&buffer[bufferPosition], bufferPosition);
     blockVIDF.cropPosY    = GetUInt16(&buffer[bufferPosition], bufferPosition);
@@ -160,11 +159,11 @@ void MLVLoader::InitOCImage(Image::OCImage& image, uint16_t width, uint16_t heig
 
 void MLVLoader::Load(uint8_t* data, unsigned int size, Image::OCImage& image, IAllocator& allocator)
 {
-    // TODO: Add handlng of endianess
-    
+    // TODO: Add handlng of endianess 
     unsigned int bufferPosition = 0;
     mlv_file_hdr_t mlvHeader = ReadHeader(data, bufferPosition);
-
+    _targetData = data;
+    
     unsigned int blockHeaderSize = sizeof(mlv_hdr_t);
   
     while(bufferPosition < size)
@@ -173,37 +172,61 @@ void MLVLoader::Load(uint8_t* data, unsigned int size, Image::OCImage& image, IA
         std::string s(reinterpret_cast<char const*>(&blockHeader.blockType), 4);
         
         if(mlvFunc.find(s) != mlvFunc.end())
-        {
+        {   
             MLVFunc callable = mlvFunc[s];
             callable(data, bufferPosition, blockHeader); 
         }
         else
-        {
+        {   
+            if(s != "NULL")
+            std::cout << "Block :" << s << std::endl;
+            
             bufferPosition += blockHeader.blockSize - blockHeaderSize;
         }
     }
     
-    std::unique_ptr<BayerFrameDownscaler> frameProcessor(new BayerFrameDownscaler());
-    unsigned int dataSize = blockRAWI.xRes * blockRAWI.yRes; 
+    unsigned int frameSize = blockRAWI.xRes * blockRAWI.yRes;
     
-    for(int index = 0; index < _sourceData.size() - 1; index++)
-    {  
-      unsigned int imageDataSize = 0;
-      ImageFormat imageFormat = ImageFormat::Integer12;
-      
-      InitOCImage(image, blockRAWI.xRes, blockRAWI.yRes, blockRAWI.rawInfo.bits_per_pixel, imageDataSize, imageFormat);
-      
-      image.SetRedChannel(allocator.Allocate(dataSize));
-      image.SetGreenChannel(allocator.Allocate(dataSize));
-      image.SetBlueChannel(allocator.Allocate(dataSize));
-      
-      unsigned int offset = _sourceData[index];       
-
-      SwapEndianess16BitArray(&data[offset], imageDataSize);
-
-      frameProcessor->SetData(&data[offset], image, imageFormat);
-    //frameProcessor->SetLinearizationData(linearizationTable, linearizationLength);
-      frameProcessor->Process();
-    }
-   
+    RawPoolAllocator *poolAllocator = reinterpret_cast<RawPoolAllocator*>(&allocator);    
+    poolAllocator->InitAllocator(_sourceData, frameSize);
 }
+
+void MLVLoader::ProcessFrame(unsigned int frameNumber , Image::OCImage& image, IAllocator& allocator)
+{    
+     
+     RawPoolAllocator *poolAllocator = reinterpret_cast<RawPoolAllocator*>(&allocator);
+     
+     if(poolAllocator->GetState(frameNumber) == FrameState::Allocated)
+     {
+         unsigned int index = poolAllocator->GetBufferIndex(frameNumber);
+         image.SetRedChannel(poolAllocator->GetData(index));
+         image.SetGreenChannel(poolAllocator->GetData(index + 1));
+         image.SetBlueChannel(poolAllocator->GetData(index + 2));
+         
+         return;
+     }
+     std::cout << frameNumber << std::endl;
+     std::unique_ptr<BayerFrameDownscaler> frameProcessor(new BayerFrameDownscaler());
+     unsigned int dataSize = blockRAWI.xRes * blockRAWI.yRes; 
+     
+     unsigned int imageDataSize = 0;
+     ImageFormat imageFormat = ImageFormat::Integer12;
+      
+     InitOCImage(image, blockRAWI.xRes, blockRAWI.yRes, blockRAWI.rawInfo.bits_per_pixel, imageDataSize, imageFormat);
+     
+     poolAllocator->SetFrameInfo(frameNumber, FrameState::Allocated);
+
+     image.SetRedChannel(poolAllocator->Allocate(frameNumber, dataSize));
+     image.SetGreenChannel(poolAllocator->Allocate(frameNumber, dataSize));
+     image.SetBlueChannel(poolAllocator->Allocate( frameNumber, dataSize)); 
+    
+     unsigned int offset = _sourceData[frameNumber - 1];       
+
+     SwapEndianess16BitArray(&_targetData[offset], imageDataSize);
+
+     frameProcessor->SetData(&_targetData[offset], image, imageFormat);
+    //frameProcessor->SetLinearizationData(linearizationTable, linearizationLength);
+     frameProcessor->Process();           
+}
+
+

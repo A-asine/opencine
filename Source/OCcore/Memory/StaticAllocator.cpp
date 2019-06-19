@@ -4,40 +4,95 @@
 
 #include "StaticAllocator.h"
 
-RawPoolAllocator::RawPoolAllocator(size_t pageSize) :
-	_mem(nullptr),
-	_currentOffset(0)
-{
-    _mem = new uint8_t[pageSize];
+#define SzLimit 15 * 1024 * 1024
+
+RawPoolAllocator::RawPoolAllocator()
+{    
+    _mem = nullptr;
+    _currentOffset = 0;
+    _poolBlock = 0;
+    _totalBlock = 0;
 }
 
 RawPoolAllocator::~RawPoolAllocator()
-{
+{  
 	if(_mem != nullptr)
 	{
 		delete [] _mem;
 	}
 }
 
-void* RawPoolAllocator::Allocate(size_t size/*, size_t align*/)
+void RawPoolAllocator::InitAllocator(std::vector<unsigned int>& frameOffset, unsigned int frameSize)
 {
-	_pointerMap.push_back(std::make_pair(_currentOffset, size));
+    _frameCount = frameOffset.size();
+    
+    for(unsigned int frameNumber = 1; frameNumber <= _frameCount; frameNumber++)
+    {  
+       FrameInfo frameInfo(frameOffset[frameNumber - 1], -1, frameSize);
+       _frameMap.insert(std::make_pair(frameNumber, frameInfo));
+    } 
+    
+    int numBlock = 0;
+    numBlock = (frameSize * _frameCount) <= SzLimit ?  _frameCount : (SzLimit / frameSize);
+    
+    _totalBlock = numBlock * 3;
+    _mem = new uint8_t[numBlock * frameSize * 3];    // Each Frame will contain three channels
+    
+    std::cout << _totalBlock << std::endl;
+     
+}
+
+void* RawPoolAllocator::Allocate(unsigned int frameNumber, size_t size)
+{   
+    
+    if(_poolBlock == _totalBlock)
+    {
+      _poolBlock = 0;
+      _currentOffset = 0;                 // for looping purpose
+    }
+    std::cout << _poolBlock << std::endl;
+    if(_pointerMap[_poolBlock].first != 0)
+    { 
+      unsigned int framePresent = _pointerMap[_poolBlock].first; 
+      _frameMap[framePresent].SetBufferIndex(-1);
+      _frameMap[framePresent].SetFrameState(FrameState::Free);
+    }
+    
+	_pointerMap[_poolBlock] = std::make_pair(frameNumber, _currentOffset);
 	
 	void* ptr = _mem + _currentOffset;
 	_currentOffset += size;
-
+    _poolBlock += 1; 
+   
 	return ptr;
 }
 
+void RawPoolAllocator::SetFrameInfo(unsigned int frameNumber, FrameState state)
+{
+    _frameMap[frameNumber].SetBufferIndex(_poolBlock); // set index of red channel only
+    _frameMap[frameNumber].SetFrameState(state); 
+}
+
+
+unsigned int RawPoolAllocator::GetBufferIndex(unsigned int frameNumber)
+{   
+    return _frameMap[frameNumber].BufferIndex();
+}
+
+FrameState RawPoolAllocator::GetState(unsigned int frameNumber)
+{
+    return _frameMap[frameNumber].State();
+} 
+
 void* RawPoolAllocator::GetData(int index)
 {
-    void* ptr = &_mem[_pointerMap[index].first];
+    void* ptr = &_mem[_pointerMap[index].second];
     return ptr;
 }
  
 int RawPoolAllocator::GetFrameCount()
 {
-    return (_pointerMap.size());
+    return _frameCount;
 }
 
 void RawPoolAllocator::Deallocate(void* p)

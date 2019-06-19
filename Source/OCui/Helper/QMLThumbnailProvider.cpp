@@ -26,7 +26,7 @@ QMLThumbnailProvider::QMLThumbnailProvider() :
     //    demux = new QtAV::AVDemuxer();
     //    dec = QtAV::VideoDecoder::create();
 
-    _allocator = new RawPoolAllocator(512 * 1024 * 1024);
+    _allocator = new RawPoolAllocator();
 }
 
 QMLThumbnailProvider::~QMLThumbnailProvider()

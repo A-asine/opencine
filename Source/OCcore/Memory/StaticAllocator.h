@@ -8,29 +8,40 @@
 #include <vector>
 #include <utility>
 #include <stdint.h>
+#include <unordered_map>
 
 #include "IAllocator.h"
+#include "FrameInfo.h"
 
 #include "OCcore_export.h"
 
 class OCCORE_EXPORT RawPoolAllocator : public IAllocator
 {
     uint8_t* _mem;
-    size_t _currentOffset;
-
-    std::vector< std::pair<size_t, size_t> > _pointerMap; // pointer, size
+    size_t   _currentOffset;
+    
+    unsigned int _frameCount;
+    int _poolBlock;
+    int _totalBlock;
+    
+    std::unordered_map< unsigned int, FrameInfo> _frameMap; // frameNumber, frameInfo
+    std::unordered_map< int, std::pair<unsigned int, unsigned int> > _pointerMap; // index, (frameNumber, currentOffset)
 
 public:
-    explicit RawPoolAllocator(size_t pageSize);
+    RawPoolAllocator();
     ~RawPoolAllocator();
-
-    void* Allocate(size_t size /*, size_t align*/) override;
+   
+    void InitAllocator(std::vector<unsigned int>&, unsigned int frameSize);
+    
+    void* Allocate(unsigned int frameNumber, size_t size) override;
     void Deallocate(void* p) override;
     size_t allocated_size(void* p) override;
     
     void* GetData(int index);
-    int GetFrameCount();
-    
+    int   GetFrameCount();
+    unsigned int GetBufferIndex(unsigned int frameNumber);
+    FrameState GetState(unsigned int frameNumber); 
+    void SetFrameInfo(unsigned int frameNumber, FrameState state);   
 };
 
 #endif // STATICALLOCATOR_H
