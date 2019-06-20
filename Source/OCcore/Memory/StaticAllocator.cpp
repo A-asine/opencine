@@ -24,8 +24,8 @@ RawPoolAllocator::~RawPoolAllocator()
 
 void RawPoolAllocator::InitAllocator(std::vector<unsigned int>& frameOffset, unsigned int frameSize)
 {
-    _frameCount = frameOffset.size();
-    
+    _frameCount = frameOffset.size();  
+ 
     for(unsigned int frameNumber = 1; frameNumber <= _frameCount; frameNumber++)
     {  
        FrameInfo frameInfo(frameOffset[frameNumber - 1], -1, frameSize);
@@ -37,14 +37,11 @@ void RawPoolAllocator::InitAllocator(std::vector<unsigned int>& frameOffset, uns
     
     _totalBlock = numBlock * 3;
     _mem = new uint8_t[numBlock * frameSize * 3];    // Each Frame will contain three channels
-    
-    std::cout << _totalBlock << std::endl;
      
 }
 
 void* RawPoolAllocator::Allocate(unsigned int frameNumber, size_t size)
 {   
-    
     if(_poolBlock == _totalBlock)
     {
       _poolBlock = 0;
@@ -76,12 +73,12 @@ void RawPoolAllocator::SetFrameInfo(unsigned int frameNumber, FrameState state)
 
 unsigned int RawPoolAllocator::GetBufferIndex(unsigned int frameNumber)
 {   
-    return _frameMap[frameNumber].BufferIndex();
+    return _frameMap[frameNumber].GetBufferIndex();
 }
 
 FrameState RawPoolAllocator::GetState(unsigned int frameNumber)
 {
-    return _frameMap[frameNumber].State();
+    return _frameMap[frameNumber].GetFrameState();
 } 
 
 void* RawPoolAllocator::GetData(int index)

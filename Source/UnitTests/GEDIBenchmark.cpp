@@ -11,7 +11,7 @@
 
 TEST_CASE("GEDI Benchmark", "[OC::Image]")
 {
-    IAllocator* poolAllocator = new RawPoolAllocator();
+    RawPoolAllocator* poolAllocator = new RawPoolAllocator();
 
     std::unique_ptr<OC::Image::OCImage> image(new OC::Image::OCImage());
 

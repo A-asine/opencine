@@ -72,8 +72,8 @@ namespace OC
             virtual ~TIFFLoader();
 
             void ProcessIFDBlock() const;
-            void Load(uint8_t* data, unsigned int size, Image::OCImage& image, IAllocator& allocator) override;
-            void ProcessFrame(unsigned int frameNumber, Image::OCImage& image, IAllocator& allocator) override;
+            void Load(uint8_t* data, unsigned int size, Image::OCImage& image, RawPoolAllocator& allocator) override;
+            void ProcessFrame(unsigned int frameNumber, Image::OCImage& image, RawPoolAllocator& allocator) override;
             bool CheckFormat(uint8_t* data, std::streamsize size);
         };
     }

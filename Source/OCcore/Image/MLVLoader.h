@@ -18,8 +18,6 @@
 
 
 typedef std::function < void(uint8_t*, unsigned int&, mlv_hdr_t& )> MLVFunc;
-
-
 // void is return type, uint8_t* is file data, unsigned int is offset to filedata, mlv_hdr_t is block of MLV 
 
 namespace OC
@@ -49,12 +47,11 @@ namespace OC
             
             void InitOCImage(Image::OCImage& image, uint16_t width, uint16_t height, uint32_t bits_per_pixel,
                               unsigned int& imageDataSize, Image::ImageFormat& imageFormat);
-  
         public:
             MLVLoader();
             
-            void Load(uint8_t* data, unsigned int size, Image::OCImage& image, IAllocator& allocator) override;
-            void ProcessFrame(unsigned int frameNumber, Image::OCImage& image, IAllocator& allocator) override;
+            void Load(uint8_t* data, unsigned int size, Image::OCImage& image, RawPoolAllocator& allocator) override;
+            void ProcessFrame(unsigned int frameNumber, Image::OCImage& image, RawPoolAllocator& allocator) override;
             
             bool CheckFormat(uint8_t* data, std::streamsize size);
         };

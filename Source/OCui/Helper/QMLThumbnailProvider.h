@@ -23,7 +23,7 @@ class OCUI_EXPORT QMLThumbnailProvider : public QQuickImageProvider
 
     std::unique_ptr<OC::Image::OCImage> _image;
 
-    IAllocator *_allocator;
+    RawPoolAllocator *_allocator;
 
 public:
     QMLThumbnailProvider();

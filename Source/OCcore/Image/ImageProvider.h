@@ -13,7 +13,7 @@
 
 #include "OCcore_export.h"
 
-class IAllocator;
+class RawPoolAllocator;
 
 namespace OC
 {
@@ -21,13 +21,15 @@ namespace OC
     {
         class OCImage;
     }
-
+  
     namespace DataProvider
     {
         class IImageLoader;
 
         class OCCORE_EXPORT ImageProvider
-        {
+        {  
+            mutable IImageLoader *imageLoader;
+            
             // FIXME: Evaluate usage of FileFormat enum as key
             std::unordered_map<OC::Image::FileFormat, std::shared_ptr<IImageLoader>, OC::Image::FileFormatHash> _imageLoaders;
 
@@ -37,8 +39,8 @@ namespace OC
             ImageProvider();
 
             bool ReadBinaryFile(std::string fileName, std::streamsize& length, unsigned char*& fileData) const;
-            void Load(std::string fileName, OC::Image::FileFormat format, OC::Image::OCImage& image, IAllocator& allocator) const;
-            void ProcessFrame(unsigned int frameNumber, OC::Image::OCImage& image, IAllocator& allocator) const;
+            void Load(std::string fileName, OC::Image::FileFormat format, OC::Image::OCImage& image, RawPoolAllocator& allocator) const;
+            void ProcessFrame(unsigned int frameNumber, OC::Image::OCImage& image, RawPoolAllocator& allocator) const;
         };
     }
 }

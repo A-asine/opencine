@@ -19,7 +19,7 @@ class FrameInfo
     // more Info;
  
 public:
-   
+
     FrameInfo()
     {
       
@@ -27,32 +27,32 @@ public:
     
     FrameInfo(unsigned int fileOffset, unsigned int bufferIndex, unsigned int frameSize)
     {
-      _frameState     = FrameState::Free;
-      _indexInBuffer  = bufferIndex;
-      _offsetInFile   = fileOffset;
-      _frameSize      = frameSize;
+       _frameState     = FrameState::Free;
+       _indexInBuffer  = bufferIndex;
+       _offsetInFile   = fileOffset;
+       _frameSize      = frameSize;
     }
     
-    unsigned int BufferIndex()
+    unsigned int GetBufferIndex()
     {
-      return _indexInBuffer;
-    }      
+       return _indexInBuffer;
+    }
     
     void SetBufferIndex(unsigned int index)
     {
-      _indexInBuffer = index;   
+       _indexInBuffer = index;
     }
     
     void SetFrameState(FrameState state)
     {
-      _frameState = state;  
-    }
-  
-    FrameState State()
-    {
-      return _frameState;
+       _frameState = state; 
     }
     
+    FrameState GetFrameState()
+    {
+        return _frameState;
+    }
+        
 };
 
 #endif

@@ -10,12 +10,12 @@
 #include <stdint.h>
 #include <unordered_map>
 
-#include "IAllocator.h"
+//#include "IAllocator.h"
 #include "FrameInfo.h"
 
 #include "OCcore_export.h"
 
-class OCCORE_EXPORT RawPoolAllocator : public IAllocator
+class OCCORE_EXPORT RawPoolAllocator //: public IAllocator
 {
     uint8_t* _mem;
     size_t   _currentOffset;
@@ -33,9 +33,9 @@ public:
    
     void InitAllocator(std::vector<unsigned int>&, unsigned int frameSize);
     
-    void* Allocate(unsigned int frameNumber, size_t size) override;
-    void Deallocate(void* p) override;
-    size_t allocated_size(void* p) override;
+    void* Allocate(unsigned int frameNumber, size_t size);
+    void Deallocate(void* p);
+    size_t allocated_size(void* p);
     
     void* GetData(int index);
     int   GetFrameCount();

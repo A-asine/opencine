@@ -19,7 +19,7 @@ unsigned char* imageData;
 unsigned short* linearizationTable;
 unsigned int linearizationLength;
 
-IAllocator* _allocator = nullptr;
+RawPoolAllocator* _allocator = nullptr;
 
 TIFFLoader::TIFFLoader() : _swapEndianess(false), _imageDataOffset(0), _bitsPerPixel(ImageFormat::Integer12)
 {
@@ -122,7 +122,7 @@ void TIFFLoader::FindMainImage(unsigned char* data, unsigned int& ifdOffset, uin
     }
 }
 
-void TIFFLoader::Load(uint8_t* data, unsigned size, OCImage& image, IAllocator& allocator)
+void TIFFLoader::Load(uint8_t* data, unsigned size, OCImage& image, RawPoolAllocator& allocator)
 {
     if((data[0] << 8 | data[1]) == 0x4d4d && !IsBigEndianMachine())
     {
@@ -137,8 +137,7 @@ void TIFFLoader::Load(uint8_t* data, unsigned size, OCImage& image, IAllocator& 
     FindMainImage(data, ifdOffset, ifdCount);
 
     std::unordered_map<int, std::string> tagNames = CreateTIFFTagMap();
-
-
+    
     std::unordered_map<int, std::function<void(TIFFTag&)>> varMap;
     ProcessTags(varMap, _bitsPerPixel, size, image, data);
 
@@ -161,7 +160,7 @@ void TIFFLoader::Load(uint8_t* data, unsigned size, OCImage& image, IAllocator& 
 
     _allocator = &allocator;
     PreProcess(data, image);
-
+    
     Cleanup();
 }
 
@@ -243,10 +242,11 @@ void TIFFLoader::ProcessTags(std::unordered_map<int, std::function<void(TIFFTag&
 void TIFFLoader::PreProcess(unsigned char* data, OCImage& image) const
 {
     auto start = std::chrono::high_resolution_clock::now();
-
+    
     std::unique_ptr<BayerFramePreProcessor> frameProcessor(new BayerFramePreProcessor());
-
+    
     unsigned int dataSize = image.Width() * image.Height();
+    
     image.SetRedChannel(_allocator->Allocate(1, dataSize));
     image.SetGreenChannel(_allocator->Allocate(1, dataSize));
     image.SetBlueChannel(_allocator->Allocate(1, dataSize));
@@ -267,7 +267,7 @@ void TIFFLoader::PreProcess(unsigned char* data, OCImage& image) const
     image.SetBlueChannel(frameProcessor->GetDataBlue());
 }
 
-void TIFFLoader::ProcessFrame(unsigned int frameNumber, OCImage& image, IAllocator& allocator)
+void TIFFLoader::ProcessFrame(unsigned int frameNumber, OCImage& image, RawPoolAllocator& allocator)
 {
 
    // add implementation

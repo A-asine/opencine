@@ -15,8 +15,6 @@
 using namespace OC::DataProvider;
 using namespace OC::Image;
 
-IImageLoader *imageLoader = nullptr;
-
 IImageLoader* ImageProvider::FindSuitableLoader(uint8_t* data, std::streamsize size) const
 {
     for(std::pair<OC::Image::FileFormat, std::shared_ptr<IImageLoader>> entry : _imageLoaders)
@@ -32,7 +30,9 @@ IImageLoader* ImageProvider::FindSuitableLoader(uint8_t* data, std::streamsize s
 }
 
 ImageProvider::ImageProvider()
-{  
+{    
+    imageLoader = nullptr;
+    
     std::shared_ptr<TIFFLoader> tiffLoader = std::make_shared<TIFFLoader>();
     _imageLoaders.insert(std::make_pair(FileFormat::TIFF, tiffLoader));
     _imageLoaders.insert(std::make_pair(FileFormat::DNG, tiffLoader));
@@ -64,7 +64,7 @@ bool ImageProvider::ReadBinaryFile(std::string fileName, std::streamsize& length
     return true;
 }
 
-void ImageProvider::Load(std::string fileName, FileFormat format, OCImage& image, IAllocator& allocator) const
+void ImageProvider::Load(std::string fileName, FileFormat format, OCImage& image, RawPoolAllocator& allocator) const
 {
     std::streamsize length = 0;
     uint8_t* fileData = nullptr;
@@ -107,7 +107,7 @@ void ImageProvider::Load(std::string fileName, FileFormat format, OCImage& image
     OC_LOG_INFO(log);
 }
 
-void ImageProvider::ProcessFrame( unsigned int frameNumber, OCImage& image, IAllocator& allocator) const
+void ImageProvider::ProcessFrame( unsigned int frameNumber, OCImage& image, RawPoolAllocator& allocator) const
 {    
     imageLoader->ProcessFrame(frameNumber, image, allocator);
 }

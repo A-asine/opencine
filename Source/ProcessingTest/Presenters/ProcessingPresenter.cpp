@@ -58,7 +58,7 @@ void ProcessingPresenter::Show()
 {
     auto start = std::chrono::high_resolution_clock::now();
 
-    IAllocator* poolAllocator = new RawPoolAllocator();
+    RawPoolAllocator* poolAllocator = new RawPoolAllocator();
 
     OC_LOG_INFO("Loading image");
     // File format is set to "unknown" to let OC determine it automatically
@@ -66,14 +66,12 @@ void ProcessingPresenter::Show()
 
     OC_LOG_INFO("Loading finished");
     
-    RawPoolAllocator* allocator = reinterpret_cast<RawPoolAllocator*>(poolAllocator);
-    
-    unsigned int frameCount = allocator->GetFrameCount();
+    unsigned int frameCount = poolAllocator->GetFrameCount();
     
     for(unsigned int frameNumber = 1; frameNumber < frameCount; frameNumber++)
     {
       _view->EnableRendering(false);
-        
+      
       provider->ProcessFrame(frameNumber, *_image.get(), *poolAllocator); 
         
       _view->SetFrame(*_image.get());
