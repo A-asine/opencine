@@ -179,7 +179,8 @@ void MLVLoader::Load(uint8_t* data, unsigned int size, Image::OCImage& image, Ra
         else
         {   
             if(s != "NULL")
-            std::cout << "Block :" << s << std::endl;
+            std::cout << "No processing implemented for block. Type: " << s << " Size: " << blockHeader.blockSize << " bytes" 
+            << std::endl;
             
             bufferPosition += blockHeader.blockSize - blockHeaderSize;
         }
@@ -191,10 +192,11 @@ void MLVLoader::Load(uint8_t* data, unsigned int size, Image::OCImage& image, Ra
 }
 
 void MLVLoader::ProcessFrame(unsigned int frameNumber , Image::OCImage& image, RawPoolAllocator& allocator)
-{      
-     std::cout << frameNumber << std::endl; 
+{          
      if(allocator.GetState(frameNumber) == FrameState::Allocated)
-     {
+     {  
+         std::cout << "frame :" << frameNumber << "already present in Buffer" << std::endl; 
+      
          unsigned int index = allocator.GetBufferIndex(frameNumber);
          image.SetRedChannel(allocator.GetData(index));
          image.SetGreenChannel(allocator.GetData(index + 1));
@@ -202,7 +204,7 @@ void MLVLoader::ProcessFrame(unsigned int frameNumber , Image::OCImage& image, R
          
          return;
      }
-    
+     
      std::unique_ptr<BayerFrameDownscaler> frameProcessor(new BayerFrameDownscaler());
      unsigned int dataSize = blockRAWI.xRes * blockRAWI.yRes; 
      
@@ -212,7 +214,7 @@ void MLVLoader::ProcessFrame(unsigned int frameNumber , Image::OCImage& image, R
      InitOCImage(image, blockRAWI.xRes, blockRAWI.yRes, blockRAWI.rawInfo.bits_per_pixel, imageDataSize, imageFormat);
      
      allocator.SetFrameInfo(frameNumber, FrameState::Allocated);
-
+       
      image.SetRedChannel(allocator.Allocate(frameNumber, dataSize));
      image.SetGreenChannel(allocator.Allocate(frameNumber, dataSize));
      image.SetBlueChannel(allocator.Allocate( frameNumber, dataSize)); 

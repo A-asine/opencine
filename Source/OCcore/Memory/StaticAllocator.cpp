@@ -2,6 +2,9 @@
 // Project: OpenCine / OCcore
 // License: GNU GPL Version 3 (https://www.gnu.org/licenses/gpl-3.0.en.html)
 
+#include <Log/Logger.h>
+#include <string>
+
 #include "StaticAllocator.h"
 
 #define SzLimit 15 * 1024 * 1024
@@ -33,21 +36,19 @@ void RawPoolAllocator::InitAllocator(std::vector<unsigned int>& frameOffset, uns
     } 
     
     int numBlock = 0;
+    // bufferSize will in multiple of frameSize
     numBlock = (frameSize * _frameCount) <= SzLimit ?  _frameCount : (SzLimit / frameSize);
     
     _totalBlock = numBlock * 3;
-    _mem = new uint8_t[numBlock * frameSize * 3];    // Each Frame will contain three channels
-     
+    // Each Frame will contain three channels
+    _mem = new uint8_t[numBlock * frameSize * 3];  
+      
+    OC_LOG_INFO("Total size of buffer: " + std::to_string(numBlock * frameSize * 3) 
+                 + " | total number of blocks: " + std::to_string(_totalBlock)); 
 }
 
 void* RawPoolAllocator::Allocate(unsigned int frameNumber, size_t size)
 {   
-    if(_poolBlock == _totalBlock)
-    {
-      _poolBlock = 0;
-      _currentOffset = 0;                 // for looping purpose
-    }
-    std::cout << _poolBlock << std::endl;
     if(_pointerMap[_poolBlock].first != 0)
     { 
       unsigned int framePresent = _pointerMap[_poolBlock].first; 
@@ -65,7 +66,23 @@ void* RawPoolAllocator::Allocate(unsigned int frameNumber, size_t size)
 }
 
 void RawPoolAllocator::SetFrameInfo(unsigned int frameNumber, FrameState state)
-{
+{   
+     if(_poolBlock == _totalBlock)
+    {        
+      std::cout << std::endl <<"Buffer has No space left, start from PoolBlock 0 again" << std::endl;
+      _poolBlock = 0;
+      _currentOffset = 0;                 // for looping purpose
+    }
+     
+    std::string redPool   = std::to_string(_poolBlock);
+    std::string greenPool = std::to_string(_poolBlock + 1);
+    std::string bluePool  = std::to_string(_poolBlock + 2);
+    
+    std::string poolBlock = "PoolBlock :" + redPool + "," + greenPool + "," + bluePool + "," 
+                             + "are now occupied with R,G,B channel of frame :" + std::to_string(frameNumber);
+                                 
+    OC_LOG_INFO(poolBlock);
+     
     _frameMap[frameNumber].SetBufferIndex(_poolBlock); // set index of red channel only
     _frameMap[frameNumber].SetFrameState(state); 
 }

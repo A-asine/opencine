@@ -56,32 +56,36 @@ ProcessingPresenter::ProcessingPresenter(IProcessingView& view) : _currentDebaye
 
 void ProcessingPresenter::Show()
 {
-    auto start = std::chrono::high_resolution_clock::now();
-
     RawPoolAllocator* poolAllocator = new RawPoolAllocator();
 
-    OC_LOG_INFO("Loading image");
+    OC_LOG_INFO("Loading File");
     // File format is set to "unknown" to let OC determine it automatically
     provider->Load(_currentFilePath, FileFormat::Unknown, *_image.get(), *poolAllocator);
 
     OC_LOG_INFO("Loading finished");
     
+    auto start = std::chrono::high_resolution_clock::now();
+      
     unsigned int frameCount = poolAllocator->GetFrameCount();
     
+    // last frame is skipped to avoid segmentation fault
     for(unsigned int frameNumber = 1; frameNumber < frameCount; frameNumber++)
     {
       _view->EnableRendering(false);
       
+      std::string frameLog = "processing Frame No: " + std::to_string(frameNumber); 
+      OC_LOG_INFO(frameLog);
+      
       provider->ProcessFrame(frameNumber, *_image.get(), *poolAllocator); 
-        
+      
       _view->SetFrame(*_image.get());
       _view->EnableRendering(true);
-        
-    //std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
+    
       QTime dieTime= QTime::currentTime().addMSecs(30);
       while (QTime::currentTime() < dieTime)
       QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+      
+      OC_LOG_INFO("Processing finished");
     }   
 }
 
