@@ -187,8 +187,11 @@ void MLVLoader::Load(uint8_t* data, unsigned int size, Image::OCImage& image, Ra
     }
     
     unsigned int frameSize = blockRAWI.xRes * blockRAWI.yRes;
-        
+    unsigned int imageDataSize = 0;
+    ImageFormat imageFormat = ImageFormat::Integer12;  
+  
     allocator.InitAllocator(_sourceData, frameSize);
+    InitOCImage(image, blockRAWI.xRes, blockRAWI.yRes, blockRAWI.rawInfo.bits_per_pixel, imageDataSize, imageFormat);
 }
 
 void MLVLoader::ProcessFrame(unsigned int frameNumber , Image::OCImage& image, RawPoolAllocator& allocator)

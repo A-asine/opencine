@@ -19,7 +19,8 @@ FILE(GLOB SOURCE_FILES "*.cpp" "*.h" "*.hpp"
                        "Interfaces/*.cpp" "Interfaces/*.h"
                        "Presenters/*.cpp" "Presenters/*.h"
                        "Controls/*.cpp" "Controls/*.h"
-                       "Shaders/*.vert" "Shaders/*.frag")
+                       "Shaders/*.vert" "Shaders/*.frag"
+                       "AVIEncode/*.cpp" "AVIEncode/*.h")
 
 FILE(GLOB UI_FILES "Views/*.ui" "Controls/*.ui")
 
