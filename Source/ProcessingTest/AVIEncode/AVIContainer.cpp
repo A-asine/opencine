@@ -1,263 +1,248 @@
-#include "AVIStruct.h"
+// Copyright (c) 2019 apertus° Association & contributors
+// Project: OpenCine / processingTest
+// License: GNU GPL Version 3 (https://www.gnu.org/licenses/gpl-3.0.en.html)
+
 #include "AVIContainer.h"
 
-#define AVISize                 sizeof(List) - 2 * sizeof(uint32_t) + FindSize("hdrl") + FindSize("movi")
-#define hdrlSize                sizeof(List) - 2 * sizeof(uint32_t) + FindSize("avih") + FindSize("strl")      
-#define strlSize                sizeof(List) - 2 * sizeof(uint32_t) + FindSize("strh") + FindSize("strf")            
-#define AVIStreamHeaderSize     sizeof(AVIStreamHeader)
-#define BitmapInfoHeaderSize    sizeof(Chunk) - sizeof(uint32_t) + sizeof(BitmapInfoHeader)
-#define AVIMainHeaderSize       sizeof(AVIMainHeader)
-#define MoviSize                sizeof(List) - 2 * sizeof(uint32_t) + _frameCount * sizeof(Chunk)
+#include "AVIStruct.h"
 
+#include <cstring>
+#include <functional>
 
-AVIContainer::AVIContainer(unsigned int height, unsigned int width, uint16_t frameCount)
+#include "SimpleTree.h"
+#include <iostream>
+
+// Reference: http://yaai.sourceforge.net/yaai/fileformat.html 
+// Reference: https://github.com/BAndiT1983/OC_FrameServer
+
+const unsigned int AVIListSize       = sizeof(AVIList);
+const unsigned int AVIChunkSize      = sizeof(AVIChunk);
+const unsigned int AVIMainHeaderSize = sizeof(AVIMainHeader); // avih
+const unsigned int AVIStreamHeaderSize  = sizeof(AVIStreamHeader);
+const unsigned int BitmapInfoHeaderSize = sizeof(BitmapInfoHeader);
+
+#define BIND_FUNC(x) std::bind(&AVIContainer::x, this, std::placeholders::_1, std::placeholders::_2)
+
+AVIContainer::AVIContainer(int width, int height, int framesPerSecond, int frameCount) :
+	_width(width),
+	_height(height),
+	_framesPerSecond(framesPerSecond),
+	_frameCount(frameCount),
+	_frameSize(width * height * 3) // 3 -> RGB
 {
-    _height     = height;
-    _width      = width;
-    _frameCount = frameCount;
-    
-    _aviFile    = new uint8_t[220];  //  220 byte : size of avi headers 
-    
-    FindSize("avi ");
-    
-    int offset = 0;
-    CreateRIFFheader(offset);
-    std::cout << offset << std::endl;
-    WriteToFile(offset);
+	_dataBuffer = new uint8_t[300 * 1024 * 1024]; // 300MB
+
+	_rootNode = new Node(BIND_FUNC(CreateRIFFHeader), true);
+	Node* hdrlNode = _rootNode->AddChild(BIND_FUNC(CreateHDRLHeader), true);
+	hdrlNode->AddChild(BIND_FUNC(CreateAVIMainHeader), false);
+	Node* strlNode = hdrlNode->AddChild(BIND_FUNC(CreateStreamHeader), true);
+	strlNode->AddChild(BIND_FUNC(CreateAVIStreamHeader), false);
+	strlNode->AddChild(BIND_FUNC(CreateBitmapInfoHeader), false);
+	Node* moviNode = _rootNode->AddChild(BIND_FUNC(CreateMOVIHeader), true);
+	
+	_temporaryNode = moviNode; // to use moviNode in AddMoviChild func
 }
 
 AVIContainer::~AVIContainer()
-{  
-    delete []_aviFile;
-    
-    avi.close();
+{
+   delete []_dataBuffer; 
 }
 
-uint32_t AVIContainer::CreateFourCC(std::string type)
+void AVIContainer::AddMoviChild(unsigned int frameIndex, OC::Image::OCImage image)
 {
-    uint32_t fourCC = (uint32_t)type[3] << 24 |
-                      (uint32_t)type[2] << 16 |
-                      (uint32_t)type[1] << 8  |
-                      (uint32_t)type[0];
-      
-    return fourCC;
-}
-
-unsigned long int AVIContainer::FindSize(std::string type)
-{
-    if(type == "avi ")
-    {
-      headerSize["avi "] = AVISize; 
-      return (headerSize["avi "] + 2 * sizeof(uint32_t));
-    }
+   if(frameIndex > _frameCount)
+   {
+       BuildAVI(_dataBuffer, _rootNode); 
+       std::ofstream out("sample.avi", std::ofstream::binary | std::ofstream::out);
+       out.write(reinterpret_cast<const char*>(_dataBuffer), _fileSize);
+   	   out.close();
+   }
+   else
+   {
+       _image = image;
+       _temporaryNode->AddChild(BIND_FUNC(AddFrame), false);
+   }
    
-    if(type == "hdrl")
-    {
-      headerSize["hdrl"] = hdrlSize;
-      return ( headerSize["hdrl"] + 2 * sizeof(uint32_t));
-    }
-    
-    if(type == "strl")
-    {
-      headerSize["strl"] = strlSize;                                 
-      return (headerSize["strl"]  + 2 * sizeof(uint32_t));
-    }
-    
-    if(type == "strh") 
-    {
-      headerSize["strh"] = AVIStreamHeaderSize;
-      return headerSize["strh"]; 
-    }
-  
-    if(type == "strf")
-    {
-      headerSize["strf"] = BitmapInfoHeaderSize;
-      return headerSize["strf"] + sizeof(uint32_t);
-    }
-  
-    if(type == "avih")
-    {
-      headerSize["avih"] = AVIMainHeaderSize;
-      return headerSize["avih"];
-    }
-  
-    if(type == "movi")
-    {
-      unsigned long int value = _frameCount * (_height * _width * 3);
-      headerSize["movi"]       = MoviSize + value;
-      return headerSize["movi"] + 2 * sizeof(uint32_t);
-    }
-
-    return 0;
 }
 
-void AVIContainer::WriteToFile(int &offset)
-{  
-    avi.open("sample.avi", std::ios::binary);
-    avi.write(reinterpret_cast<char*>(_aviFile), offset);
+void AVIContainer::SetFourCC(uint32_t* fourCC, const char value[4])
+{
+	if (value == nullptr)
+	{
+		fourCC[3] = 0;
+		fourCC[2] = 0;
+		fourCC[1] = 0;
+		fourCC[0] = 0;
+		
+		return;
+	}
+
+	*fourCC = (uint32_t)value[3] << 24 |
+		      (uint32_t)value[2] << 16 |
+		      (uint32_t)value[1] << 8  |
+		      (uint32_t)value[0];
 }
 
-void AVIContainer::CreateRIFFheader(int &offset)
+
+unsigned int AVIContainer::CreateRIFFHeader(void* buffer, unsigned int offset)
 {
-    List list;
-    
-    list.FourCC = CreateFourCC("RIFF");
-    list.size   = headerSize["avi "];
-    list.type   = CreateFourCC("AVI ");
-    
-    std::memcpy(&_aviFile[offset], (const void*)&list , sizeof(List));
-    offset += sizeof(List);
-     
-    CreateHDRLheader(offset);
-    CreateMOVIheader(offset);   
+	AVIList hdr;
+	
+	SetFourCC(&hdr.FourCC, "RIFF");
+	hdr.Size = sizeof(uint32_t);	// Size of type, FourCC and Size are not taken into account, according to specs
+	SetFourCC(&hdr.Type, "AVI ");
+	memcpy((uint8_t*)buffer + offset, &hdr, AVIListSize);
+
+	return AVIListSize;
 }
 
-void AVIContainer::CreateHDRLheader(int &offset)
+unsigned int AVIContainer::CreateHDRLHeader(void* buffer, unsigned int offset)
 {
-    List list;
-    
-    list.FourCC = CreateFourCC("LIST");
-    list.size   = headerSize["hdrl"];
-    list.type   = CreateFourCC("hdrl");
-    
-    std::memcpy(&_aviFile[offset], (const void*)&list, sizeof(List));
-    offset += sizeof(List);
-    
-    CreateAVIHheader(offset);
-    CreateSTRLheader(offset);
+	AVIList hdr;
+	
+	SetFourCC(&hdr.FourCC, "LIST");
+	hdr.Size = 4;
+	SetFourCC(&hdr.Type, "hdrl");
+	memcpy((uint8_t*)buffer + offset, &hdr, AVIListSize);
+
+	return AVIListSize;
 }
 
-void AVIContainer::CreateAVIHheader(int &offset)
+unsigned int AVIContainer::CreateAVIMainHeader(void* buffer, unsigned int offset)
 {
-    AVIMainHeader avih;
-    
-    avih.fcc                  = CreateFourCC("avih");
-    avih.cb                   = headerSize["avih"] - 8;
-    avih.dwMicroSecPerFrame   = 100;
-    avih.dwMaxBytesPerSec     = 1000;
-    avih.dwPaddingGranularity = 0;
-    avih.dwFlags              = 1;
-    avih.dwTotalFrames        = _frameCount;  
-    avih.dwInitialFrames      = 0;
-    avih.dwStreams            = 1;
-    avih.dwSuggestedBufferSize= 100000;
-    avih.dwWidth              = _width;
-    avih.dwHeight             = _height;
-    avih.dwReserved[0]        = 0;
-    avih.dwReserved[1]        = 0;
-    avih.dwReserved[2]        = 0;
-    avih.dwReserved[3]        = 0;
-    
-    std::memcpy(&_aviFile[offset], (const void*)&avih, sizeof(AVIMainHeader));
-    offset += sizeof(AVIMainHeader); 
+	std::cout << "avih" << std::endl;
+	
+	AVIMainHeader hdr;
+	SetFourCC(&hdr.FourCC, "avih");
+	hdr.cb                 = AVIMainHeaderSize - 8;
+	hdr.MicroSecPerFrame   = 2854;
+	hdr.MaxBytesPerSec     = 100000;
+	hdr.PaddingGranularity = 0;
+	hdr.Flags              = 0;
+	hdr.TotalFrames        = _frameCount;
+	hdr.InitialFrames      = 0;
+	hdr.Streams            = 1;
+	hdr.SuggestedBufferSize= 100000;
+	hdr.Width              = _width;
+	hdr.Height             = _height;
+	
+	hdr.Reserved[0] = hdr.Reserved[1] = hdr.Reserved[2] = hdr.Reserved[3] = 0;
+
+	memcpy((uint8_t*)buffer + offset, &hdr, AVIMainHeaderSize);
+
+	return AVIMainHeaderSize;
 }
 
-void AVIContainer::CreateSTRLheader(int &offset)
+unsigned int AVIContainer::CreateAVIStreamHeader(void* buffer, unsigned offset)
 {
-    List list;
-    
-    list.FourCC = CreateFourCC("LIST");
-    list.size   = headerSize["strl"];
-    list.type   = CreateFourCC("strl");
-    
-    std::memcpy(&_aviFile[offset], (const void*)&list, sizeof(List));
-    offset += sizeof(List);
-    
-    CreateSTRHheader(offset);
-    CreateSTRFheader(offset);    
-}  
+	std::cout << "strh" << std::endl;
+	AVIChunk hdr;
+	SetFourCC(&hdr.FourCC, "strh");
+	hdr.Size = AVIStreamHeaderSize;
+	memcpy((uint8_t*)buffer + offset, &hdr, AVIChunkSize);
 
-void AVIContainer::CreateSTRHheader(int &offset)
-{
-    AVIStreamHeader strh;
-    
-    strh.FourCCType          = CreateFourCC("strh");
-    strh.cb                  = headerSize["strh"] - 8;
-    strh.fccType             = CreateFourCC("vids");
-    strh.fccHandler          = 0;
-    strh.Flags               = 0;
-    strh.Priority            = 0;
-    strh.Language            = 0;
-    strh.InitialFrames       = 0;
-    strh.Scale               = 1;
-    strh.Rate                = 30;
-    strh.Start               = 0;
-    strh.Length              = strh.Rate / strh.Scale;
-    strh.SuggestedBufferSize = 10000000;
-    strh.Quality             = 0;
-    strh.SampleSize          = 120;
+	AVIStreamHeader streamHdr;
+	SetFourCC(&streamHdr.FourCCType, "vids");
+	SetFourCC(&streamHdr.fccHandler, "RAW ");
+	
+	streamHdr.Flags               = 0;
+	streamHdr.Priority            = 0;
+	streamHdr.Language            = 0;
+	streamHdr.InitialFrames       = 0;
+	streamHdr.Scale               = 1;
+	streamHdr.Rate                = 30;
+	streamHdr.Start               = 0;
+	streamHdr.Length              = streamHdr.Rate / streamHdr.Scale;
+	streamHdr.SuggestedBufferSize = 0;
+	streamHdr.Quality             = -1;
+	streamHdr.SampleSize          = 0;
+	streamHdr.rcFrame.left        = 0;
+	streamHdr.rcFrame.right       = _width;
+	streamHdr.rcFrame.top         = 0;
+	streamHdr.rcFrame.bottom      = _height;
 
-    strh.rcFrame.left        = 0;
-    strh.rcFrame.right       = _width;
-    strh.rcFrame.top         = 0;
-    strh.rcFrame.bottom      = _height;
-   
-    std::memcpy(&_aviFile[offset], (const void *)&strh, sizeof(AVIStreamHeader));
-    offset += sizeof(AVIStreamHeader);
+	memcpy((uint8_t*)buffer + offset + AVIChunkSize, &streamHdr, AVIStreamHeaderSize);
+
+	return AVIStreamHeaderSize + AVIChunkSize;
 }
 
-void AVIContainer::CreateSTRFheader(int &offset)
+unsigned int AVIContainer::CreateBitmapInfoHeader(void* buffer, unsigned offset)
 {
-    Chunk strf;
-          
-    strf.Ckid   = CreateFourCC("strf");
-    strf.CkSize = headerSize["strf"]; 
-    
-    std::memcpy(&_aviFile[offset], (const void*)&strf, sizeof(Chunk));
-    offset += sizeof(Chunk);
-    
-    CreateBITheader(offset);
+	std::cout << "strf" << std::endl;
+	AVIChunk hdr;
+	SetFourCC(&hdr.FourCC, "strf");
+	hdr.Size = BitmapInfoHeaderSize;
+	memcpy((uint8_t*)buffer + offset, &hdr, AVIChunkSize);
+	
+	BitmapInfoHeader bitmapHdr;
+	
+	bitmapHdr.Size          = BitmapInfoHeaderSize;
+	bitmapHdr.Width         = _width;
+	bitmapHdr.Height        = _height;
+	bitmapHdr.Planes        = 1;
+	bitmapHdr.BitCount      = 24;
+	SetFourCC(&bitmapHdr.Compression, nullptr);
+	bitmapHdr.SizeImage     = 0;
+	bitmapHdr.XPelsPerMeter = 2835;
+	bitmapHdr.YPelsPerMeter = bitmapHdr.XPelsPerMeter;
+	bitmapHdr.ClrUsed       = 0;
+	bitmapHdr.ClrImportant  = 0;
+
+	memcpy((uint8_t*)buffer + offset + AVIChunkSize, &bitmapHdr, BitmapInfoHeaderSize);
+
+	return BitmapInfoHeaderSize + AVIChunkSize;
 }
 
-void AVIContainer::CreateBITheader(int &offset)
+unsigned int AVIContainer::AddFrame(void* buffer, unsigned int offset)
 {
-    BitmapInfoHeader vidf;
-  
-    vidf.Size          = sizeof(BitmapInfoHeader);
-    vidf.Width         = _width;
-    vidf.Height        = _height;
-    vidf.Planes        = 1;
-    vidf.BitCount      = 24;
-    vidf.Compression   = 0;
-    vidf.SizeImage     = 0;
-    vidf.XPelsPerMeter = 2835;
-    vidf.YPelsPerMeter = 2835;
-    vidf.ClrUsed       = 0;
-    vidf.ClrImportant  = 0;
- 
-    std::memcpy(&_aviFile[offset], (const void *)&vidf, sizeof(BitmapInfoHeader));
-    offset += sizeof(BitmapInfoHeader);
-}
-
-void AVIContainer::CreateMOVIheader(int &offset)
-{
-    List movi;
+	AVIChunk frame;
+	SetFourCC(&frame.FourCC, "00db");
+	frame.Size = _frameSize;
+	memcpy((uint8_t*)buffer + offset, &frame, AVIChunkSize);
+	
+	unsigned int dataLength = _width * _height;
+    unsigned char* interleavedArray = new unsigned char[_frameSize];
     
-    movi.FourCC = CreateFourCC("LIST");
-    movi.size   = headerSize["movi"];
-    movi.type   = CreateFourCC("movi");
-    
-    std::memcpy(&_aviFile[offset], (const void*)&movi, sizeof(List));
-    offset += sizeof(List);
-}
-
-void AVIContainer::AddFrames(OC::Image::OCImage &image)
-{
-    unsigned int dataLength = _width * _height;
-    unsigned char* interleavedArray = new unsigned char[dataLength * 3];
-
     for(int i = 0; i < dataLength; i++)
     {   
-        interleavedArray[i * 3 + 0] = (static_cast<unsigned short*>(image.RedChannel())[i] - 2052 / 3) >> 6;
-        interleavedArray[i * 3 + 1] = (static_cast<unsigned short*>(image.GreenChannel())[i] - 2052 / 3) >> 6;
-        interleavedArray[i * 3 + 2] = (static_cast<unsigned short*>(image.BlueChannel())[i] - 2052 / 3) >> 6;
+        interleavedArray[i * 3 + 0] = (static_cast<unsigned short*>(_image.RedChannel())[i] - 2052 / 3) >> 6;
+        interleavedArray[i * 3 + 1] = (static_cast<unsigned short*>(_image.GreenChannel())[i] - 2052 / 3) >> 6;
+        interleavedArray[i * 3 + 2] = (static_cast<unsigned short*>(_image.BlueChannel())[i] - 2052 / 3) >> 6;
     }
     
-    Chunk vidf;
-    vidf.Ckid   = CreateFourCC("00db");
-    vidf.CkSize = _height * _width * 3; 
-    
-    avi.write(reinterpret_cast<char*>(&vidf), sizeof(Chunk));    
-    avi.write(reinterpret_cast<char*>(interleavedArray), dataLength * 3);
+	memcpy((uint8_t*)buffer + offset + AVIChunkSize, interleavedArray, _frameSize);
+	return _frameSize + AVIChunkSize;
 }
 
+unsigned int AVIContainer::CreateStreamHeader(void* buffer, unsigned int offset)
+{
+	std::cout << "strl" << std::endl;
+	
+	AVIList hdr;
+	SetFourCC(&hdr.FourCC, "LIST");
+	hdr.Size = 4;
+	SetFourCC(&hdr.Type, "strl");
+	memcpy((uint8_t*)buffer + offset, &hdr, AVIListSize);
+
+	return AVIListSize;
+}
+
+unsigned int AVIContainer::CreateMOVIHeader(void* buffer, unsigned int offset)
+{
+	std::cout << "movi" << std::endl;
+
+	AVIList hdr;
+	SetFourCC(&hdr.FourCC, "LIST");
+	hdr.Size = 4;
+	SetFourCC(&hdr.Type, "movi");
+	memcpy((uint8_t*)buffer + offset, &hdr, AVIListSize);
+
+	return AVIListSize;
+}
+
+bool AVIContainer::BuildAVI(uint8_t* dataBuffer, Node* node)
+{
+	unsigned int offset = 0;
+	_fileSize = node->Execute(dataBuffer, offset, node->GetRequiresSize());
+	return true;
+}

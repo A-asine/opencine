@@ -1,48 +1,51 @@
-#ifndef AVICONTAINER_H
-#define AVICONTAINER_H
+// Copyright (c) 2017 apertus° Association & contributors
+// Project: OpenCine / ProcesseingTest
+// License: GNU GPL Version 3 (https://www.gnu.org/licenses/gpl-3.0.en.html)
 
-#include <unordered_map>
-#include <string>
+#ifndef AVIContainer_H
+#define AVIContainer_H
 
-#include <Memory/StaticAllocator.h>
-#include <Image/BilinearDebayer.h>
+#include <fstream>
+#include "SimpleTree.h"
 #include <Image/OCImage.h>
 
-#include "AVIStruct.h"
+// Reference: https://github.com/BAndiT1983/OC_FrameServer
 
 class AVIContainer
 {
-   unsigned int _height;
-   unsigned int _width;
-   uint16_t _frameCount;
-   
-   uint8_t* _aviFile;
-   std::ofstream avi;
-   
-   std::unordered_map<std::string, unsigned long> headerSize;
-   // more Info 
-   
+private:
+	Node* _rootNode{};	// Usually RIFF header
+	unsigned int _fileSize;
+
+	unsigned int CreateRIFFHeader(void* buffer, unsigned offset);
+	unsigned int CreateHDRLHeader(void* buffer, unsigned offset);
+	unsigned int CreateAVIMainHeader(void* buffer, unsigned offset);
+	unsigned int CreateStreamHeader(void* buffer, unsigned offset);
+	unsigned CreateMOVIHeader(void* buffer, unsigned offset);
+	unsigned int CreateAVIStreamHeader(void* buffer, unsigned offset);
+	unsigned CreateBitmapInfoHeader(void* buffer, unsigned offset);
+
+	int WriteHeaderSequence();
+
+	uint8_t* _dataBuffer;
+
+	unsigned int _width;
+	unsigned int _height;
+	unsigned int _framesPerSecond;
+	unsigned int _frameCount;
+
+	unsigned int _frameSize;   // Pre-calculated sizes
+	OC::Image::OCImage _image;
+	Node* _temporaryNode;
+
 public:
-   
-   AVIContainer(unsigned int height, unsigned int width, uint16_t frameCount);
-   
-   ~AVIContainer();
-   
-   void CreateRIFFheader(int& offset);
-   void CreateHDRLheader(int& offset);
-   void CreateAVIHheader(int& offset);
-   void CreateSTRLheader(int& offset);
-   void CreateSTRHheader(int& offset);
-   void CreateSTRFheader(int& offset);
-   void CreateBITheader(int& offset);
-   void CreateMOVIheader(int& offset);
-   
-   uint32_t CreateFourCC(std::string);
-   unsigned long int FindSize(std::string);
-   
-   void AddFrames(OC::Image::OCImage &image);  // temp function
-   void WriteToFile(int &offset);
-   
+	AVIContainer(int width, int height, int framesPerSecond, int frameCount);
+	~AVIContainer();
+
+	void SetFourCC(uint32_t* fourCC, const char value[]);
+	unsigned AddFrame(void* dataBuffer, unsigned offset);
+	void AddMoviChild(unsigned int frameNumber, OC::Image::OCImage image);
+	bool BuildAVI(uint8_t* dataBuffer, Node* node);
 };
 
-#endif
+#endif //AVIContainer_H

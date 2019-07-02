@@ -70,7 +70,7 @@ void ProcessingPresenter::Show()
       
     unsigned int frameCount = poolAllocator->GetFrameCount();
     
-    AVIContainer avi(_image->Height(), _image->Width(), frameCount);
+    AVIContainer avi(_image->Width(), _image->Height(), 30, frameCount);
     int i = 0;
    
     // last frame is skipped to avoid segmentation fault
@@ -82,7 +82,7 @@ void ProcessingPresenter::Show()
       OC_LOG_INFO(frameLog);
       
       provider->ProcessFrame(frameNumber, *_image.get(), *poolAllocator); 
-      avi.AddFrames(*_image.get());
+      avi.AddMoviChild(frameNumber, *_image.get());
       
       _view->SetFrame(*_image.get());
       _view->EnableRendering(true);
@@ -92,12 +92,9 @@ void ProcessingPresenter::Show()
       QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
       
       OC_LOG_INFO("Processing finished");
-      
-      // if(i != 25 && frameNumber == frameCount - 1)  // to add more number of frame to sample.avi
-    //  { frameNumber = 0;
-     //  i++;
-     // }
-    }   
+    }
+    
+    avi.AddMoviChild(frameCount + 1, *_image.get());   // to call AviBuild  
 }
 
 // TODO: Check how to remove allFormats, as it is used as workaround for filter selection in QFileDialog
