@@ -70,7 +70,7 @@ void ProcessingPresenter::Show()
       
     unsigned int frameCount = poolAllocator->GetFrameCount();
     
-    AVIContainer avi(_image->Width(), _image->Height(), 30, frameCount);
+    AVIContainer avi(_image->Width() / 2, _image->Height() / 2, 30, frameCount);
     int i = 0;
    
     // last frame is skipped to avoid segmentation fault
