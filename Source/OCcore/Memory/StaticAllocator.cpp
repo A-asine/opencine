@@ -56,13 +56,13 @@ void* RawPoolAllocator::Allocate(unsigned int frameNumber, size_t size)
       _frameMap[framePresent].SetFrameState(FrameState::Free);
     }
     
-	_pointerMap[_poolBlock] = std::make_pair(frameNumber, _currentOffset);
+    _pointerMap[_poolBlock] = std::make_pair(frameNumber, _currentOffset);
 	
-	void* ptr = _mem + _currentOffset;
-	_currentOffset += size;
+    void* ptr = _mem + _currentOffset; 
+    _currentOffset += size;
     _poolBlock += 1; 
    
-	return ptr;
+    return ptr;
 }
 
 void RawPoolAllocator::SetFrameInfo(unsigned int frameNumber, FrameState state)
