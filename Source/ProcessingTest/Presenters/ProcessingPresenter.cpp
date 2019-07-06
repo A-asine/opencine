@@ -30,8 +30,6 @@
 #include <Log/Logger.h>
 #include <Memory/StaticAllocator.h>
 
-#include "AVIEncode/AVIContainer.h"
-
 using namespace OC::DataProvider;
 using namespace OC::Image;
 
@@ -68,12 +66,8 @@ void ProcessingPresenter::Show()
     
     auto start = std::chrono::high_resolution_clock::now();
       
-    unsigned int frameCount = poolAllocator->GetFrameCount();
+    frameCount = poolAllocator->GetFrameCount();
     
-    AVIContainer avi(_image->Width() / 2, _image->Height() / 2, 30, frameCount);
-    int i = 0;
-   
-    // last frame is skipped to avoid segmentation fault
     for(unsigned int frameNumber = 1; frameNumber < frameCount; frameNumber++)
     {
       _view->EnableRendering(false);
@@ -82,8 +76,6 @@ void ProcessingPresenter::Show()
       OC_LOG_INFO(frameLog);
       
       provider->ProcessFrame(frameNumber, *_image.get(), *poolAllocator); 
-      avi.AddMoviChild(frameNumber, *_image.get());
-      
       _view->SetFrame(*_image.get());
       _view->EnableRendering(true);
     
@@ -92,9 +84,25 @@ void ProcessingPresenter::Show()
       QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
       
       OC_LOG_INFO("Processing finished");
-    }
+    }  
     
-    avi.AddMoviChild(frameCount + 1, *_image.get());   // to call AviBuild  
+    // Remove this call when we can interact with UI
+    FrameServe();	
+}
+
+void ProcessingPresenter::FrameServe()
+{
+    RawPoolAllocator* aviPoolAllocator = new RawPoolAllocator();
+    provider->Load(_currentFilePath, FileFormat::Unknown, *_image.get(), *aviPoolAllocator);
+    
+    _avi = std::make_shared<AVIContainer>(_image->Width() / 2, _image->Height() / 2, 30, frameCount);
+    
+    for(unsigned int frameNumber = 1; frameNumber < frameCount; frameNumber++)
+    { 
+        provider->ProcessFrame(frameNumber, *_image.get(), *aviPoolAllocator);
+        _avi->AddFrame(*_image.get());    
+    } 
+    
 }
 
 // TODO: Check how to remove allFormats, as it is used as workaround for filter selection in QFileDialog

@@ -30,7 +30,7 @@ AVIContainer::AVIContainer(int width, int height, int framesPerSecond, int frame
 	_frameCount(frameCount),
 	_frameSize(width * height * 3) // 3 -> RGB
 {
-	_dataBuffer = new uint8_t[300 * 1024 * 1024]; // 300MB
+	_dataBuffer = new uint8_t[220]; // 220 byte for headers
 
 	_rootNode = new Node(BIND_FUNC(CreateRIFFHeader), true);
 	Node* hdrlNode = _rootNode->AddChild(BIND_FUNC(CreateHDRLHeader), true);
@@ -40,29 +40,15 @@ AVIContainer::AVIContainer(int width, int height, int framesPerSecond, int frame
 	strlNode->AddChild(BIND_FUNC(CreateBitmapInfoHeader), false);
 	Node* moviNode = _rootNode->AddChild(BIND_FUNC(CreateMOVIHeader), true);
 	
-	_temporaryNode = moviNode; // to use moviNode in AddMoviChild func
+	BuildAVI(_dataBuffer, _rootNode);
+	
+	WriteToHeaders();
 }
 
 AVIContainer::~AVIContainer()
 {
    delete []_dataBuffer; 
-}
-
-void AVIContainer::AddMoviChild(unsigned int frameIndex, OC::Image::OCImage image)
-{
-   if(frameIndex > _frameCount)
-   {
-       BuildAVI(_dataBuffer, _rootNode); 
-       std::ofstream out("sample.avi", std::ofstream::binary | std::ofstream::out);
-       out.write(reinterpret_cast<const char*>(_dataBuffer), _fileSize);
-   	   out.close();
-   }
-   else
-   {
-       _image = image;
-       _temporaryNode->AddChild(BIND_FUNC(AddFrame), false);
-   }
-   
+   _file.close();
 }
 
 void AVIContainer::SetFourCC(uint32_t* fourCC, const char value[4])
@@ -83,6 +69,31 @@ void AVIContainer::SetFourCC(uint32_t* fourCC, const char value[4])
 		      (uint32_t)value[0];
 }
 
+void AVIContainer::WriteToHeaders()
+{
+    _file.open("sample.avi", std::ios::binary);
+    _file.write(reinterpret_cast<char*>(_dataBuffer), 220);
+}
+
+void AVIContainer::AddFrame(OC::Image::OCImage image)
+{
+    AVIChunk frame;
+	SetFourCC(&frame.FourCC, "00db");
+	frame.Size = _frameSize;
+	
+	unsigned int dataLength = _width * _height;
+    unsigned char* interleavedArray = new unsigned char[_frameSize];
+    
+    for(int i = 0; i < dataLength; i++)
+    {   
+        interleavedArray[i * 3 + 0] = (static_cast<unsigned short*>(image.RedChannel())[i] - 2052 / 3) >> 6;
+        interleavedArray[i * 3 + 1] = (static_cast<unsigned short*>(image.GreenChannel())[i] - 2052 / 3) >> 6;
+        interleavedArray[i * 3 + 2] = (static_cast<unsigned short*>(image.BlueChannel())[i] - 2052 / 3) >> 6;
+    } 
+    
+    _file.write(reinterpret_cast<char*>(&frame), AVIChunkSize);
+    _file.write(reinterpret_cast<char*>(interleavedArray), _frameSize);
+}
 
 unsigned int AVIContainer::CreateRIFFHeader(void* buffer, unsigned int offset)
 {
@@ -193,27 +204,6 @@ unsigned int AVIContainer::CreateBitmapInfoHeader(void* buffer, unsigned offset)
 	return BitmapInfoHeaderSize + AVIChunkSize;
 }
 
-unsigned int AVIContainer::AddFrame(void* buffer, unsigned int offset)
-{
-	AVIChunk frame;
-	SetFourCC(&frame.FourCC, "00db");
-	frame.Size = _frameSize;
-	memcpy((uint8_t*)buffer + offset, &frame, AVIChunkSize);
-	
-	unsigned int dataLength = _width * _height;
-    unsigned char* interleavedArray = new unsigned char[_frameSize];
-    
-    for(int i = 0; i < dataLength; i++)
-    {   
-        interleavedArray[i * 3 + 0] = (static_cast<unsigned short*>(_image.RedChannel())[i] - 2052 / 3) >> 6;
-        interleavedArray[i * 3 + 1] = (static_cast<unsigned short*>(_image.GreenChannel())[i] - 2052 / 3) >> 6;
-        interleavedArray[i * 3 + 2] = (static_cast<unsigned short*>(_image.BlueChannel())[i] - 2052 / 3) >> 6;
-    }
-    
-	memcpy((uint8_t*)buffer + offset + AVIChunkSize, interleavedArray, _frameSize);
-	return _frameSize + AVIChunkSize;
-}
-
 unsigned int AVIContainer::CreateStreamHeader(void* buffer, unsigned int offset)
 {
 	std::cout << "strl" << std::endl;
@@ -233,11 +223,11 @@ unsigned int AVIContainer::CreateMOVIHeader(void* buffer, unsigned int offset)
 
 	AVIList hdr;
 	SetFourCC(&hdr.FourCC, "LIST");
-	hdr.Size = 4;
+	hdr.Size = sizeof(AVIList) - 2 * sizeof(uint32_t) + _frameCount * _frameSize;
 	SetFourCC(&hdr.Type, "movi");
 	memcpy((uint8_t*)buffer + offset, &hdr, AVIListSize);
 
-	return AVIListSize;
+	return AVIListSize + _frameCount * _frameSize;
 }
 
 bool AVIContainer::BuildAVI(uint8_t* dataBuffer, Node* node)

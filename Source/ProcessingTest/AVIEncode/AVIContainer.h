@@ -35,16 +35,15 @@ private:
 	unsigned int _frameCount;
 
 	unsigned int _frameSize;   // Pre-calculated sizes
-	OC::Image::OCImage _image;
-	Node* _temporaryNode;
+	std::ofstream _file;
 
 public:
 	AVIContainer(int width, int height, int framesPerSecond, int frameCount);
 	~AVIContainer();
 
 	void SetFourCC(uint32_t* fourCC, const char value[]);
-	unsigned AddFrame(void* dataBuffer, unsigned offset);
-	void AddMoviChild(unsigned int frameNumber, OC::Image::OCImage image);
+	void AddFrame(OC::Image::OCImage image);
+	void WriteToHeaders();
 	bool BuildAVI(uint8_t* dataBuffer, Node* node);
 };
 
