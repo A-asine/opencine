@@ -8,14 +8,15 @@
 #include <vector>
 #include <functional>
 #include <unordered_map>
+#include <memory>
 
 #include <Memory/StaticAllocator.h>
+#include "BayerFrameDownscaler.h"
 
 #include "IImageLoader.h"
 #include "OCImage.h"
 
 #include "mlv_structure_mod.h"
-
 
 typedef std::function < void(uint8_t*, unsigned int&, mlv_hdr_t& )> MLVFunc;
 // void is return type, uint8_t* is file data, unsigned int is offset to filedata, mlv_hdr_t is block of MLV 
@@ -35,7 +36,9 @@ namespace OC
             uint8_t* _targetData;
             std::vector<unsigned int> _sourceData;
             std::unordered_map<std::string, MLVFunc> mlvFunc; 
-               
+            BayerFrameDownscaler* frameProcessor = new BayerFrameDownscaler();
+            int _quality;
+            
             mlv_file_hdr_t ReadHeader(uint8_t* buffer, unsigned int& bufferPosition);
             mlv_hdr_t ReadBlockHeader(uint8_t* buffer, unsigned int& bufferPosition);
             raw_info ReadRawInfo(uint8_t* buffer, unsigned int& bufferPosition);
@@ -49,7 +52,7 @@ namespace OC
                               unsigned int& imageDataSize, Image::ImageFormat& imageFormat);
         public:
             MLVLoader();
-            
+            ~MLVLoader();
             void Load(uint8_t* data, unsigned int size, Image::OCImage& image, RawPoolAllocator& allocator) override;
             void ProcessFrame(unsigned int frameNumber, Image::OCImage& image, RawPoolAllocator& allocator) override;
             

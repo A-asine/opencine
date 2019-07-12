@@ -168,9 +168,9 @@ unsigned int AVIContainer::CreateAVIStreamHeader(void* buffer, unsigned offset)
 	streamHdr.Quality             = -1;
 	streamHdr.SampleSize          = 0;
 	streamHdr.rcFrame.left        = 0;
-	streamHdr.rcFrame.right       = _width;
+	streamHdr.rcFrame.right       = _height;
 	streamHdr.rcFrame.top         = 0;
-	streamHdr.rcFrame.bottom      = _height;
+	streamHdr.rcFrame.bottom      = _width;
 
 	memcpy((uint8_t*)buffer + offset + AVIChunkSize, &streamHdr, AVIStreamHeaderSize);
 

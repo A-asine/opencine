@@ -9,12 +9,12 @@
 
 #define SzLimit 15 * 1024 * 1024
 
-RawPoolAllocator::RawPoolAllocator()
-{    
-    _mem = nullptr;
-    _currentOffset = 0;
-    _poolBlock = 0;
-    _totalBlock = 0;
+RawPoolAllocator::RawPoolAllocator() :   
+    _mem(nullptr),
+    _frameCount(0),
+    _poolBlock(0),
+    _totalBlock(0)
+{
 }
 
 RawPoolAllocator::~RawPoolAllocator()
@@ -41,7 +41,8 @@ void RawPoolAllocator::InitAllocator(std::vector<unsigned int>& frameOffset, uns
     
     _totalBlock = numBlock * 3;
     // Each Frame will contain three channels
-    _mem = new uint8_t[numBlock * frameSize * 3];  
+    _mem = new uint8_t[numBlock * frameSize * 3];
+    _pointerMap.resize(_totalBlock);  
       
     OC_LOG_INFO("Total size of buffer: " + std::to_string(numBlock * frameSize * 3) 
                  + " | total number of blocks: " + std::to_string(_totalBlock)); 
@@ -49,29 +50,27 @@ void RawPoolAllocator::InitAllocator(std::vector<unsigned int>& frameOffset, uns
 
 void* RawPoolAllocator::Allocate(unsigned int frameNumber, size_t size)
 {   
-    if(_pointerMap[_poolBlock].first != 0)
+    if(_pointerMap[_poolBlock] != 0)
     { 
-      unsigned int framePresent = _pointerMap[_poolBlock].first; 
+      unsigned int framePresent = _pointerMap[_poolBlock]; 
       _frameMap[framePresent].SetBufferIndex(-1);
       _frameMap[framePresent].SetFrameState(FrameState::Free);
     }
     
-	_pointerMap[_poolBlock] = std::make_pair(frameNumber, _currentOffset);
+	_pointerMap[_poolBlock] = frameNumber;
 	
-	void* ptr = _mem + _currentOffset;
-	_currentOffset += size;
+	void* ptr = &_mem[_poolBlock * size];
     _poolBlock += 1; 
-   
+    
 	return ptr;
 }
 
 void RawPoolAllocator::SetFrameInfo(unsigned int frameNumber, FrameState state)
 {   
-     if(_poolBlock == _totalBlock)
+    if(_poolBlock == _totalBlock)
     {        
       std::cout << std::endl <<"Buffer has No space left, start from PoolBlock 0 again" << std::endl;
-      _poolBlock = 0;
-      _currentOffset = 0;                 // for looping purpose
+      _poolBlock = 0;              // for looping purpose
     }
      
     std::string redPool   = std::to_string(_poolBlock);
@@ -98,9 +97,9 @@ FrameState RawPoolAllocator::GetState(unsigned int frameNumber)
     return _frameMap[frameNumber].GetFrameState();
 } 
 
-void* RawPoolAllocator::GetData(int index)
+void* RawPoolAllocator::GetData(int index, unsigned int size)
 {
-    void* ptr = &_mem[_pointerMap[index].second];
+    void* ptr = &_mem[index * size];
     return ptr;
 }
  

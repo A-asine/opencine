@@ -68,7 +68,7 @@ void ProcessingPresenter::Show()
       
     frameCount = poolAllocator->GetFrameCount();
     
-    for(unsigned int frameNumber = 1; frameNumber < frameCount; frameNumber++)
+    for(unsigned int frameNumber = 1; frameNumber <= frameCount; frameNumber++)
     {
       _view->EnableRendering(false);
       
@@ -76,6 +76,7 @@ void ProcessingPresenter::Show()
       OC_LOG_INFO(frameLog);
       
       provider->ProcessFrame(frameNumber, *_image.get(), *poolAllocator); 
+
       _view->SetFrame(*_image.get());
       _view->EnableRendering(true);
     
@@ -85,8 +86,7 @@ void ProcessingPresenter::Show()
       
       OC_LOG_INFO("Processing finished");
     }  
-    
-    // Remove this call when we can interact with UI
+   
     FrameServe();	
 }
 
@@ -97,7 +97,7 @@ void ProcessingPresenter::FrameServe()
     
     _avi = std::make_shared<AVIContainer>(_image->Width() / 2, _image->Height() / 2, 30, frameCount);
     
-    for(unsigned int frameNumber = 1; frameNumber < frameCount; frameNumber++)
+    for(unsigned int frameNumber = 1; frameNumber <= frameCount; frameNumber++)
     { 
         provider->ProcessFrame(frameNumber, *_image.get(), *aviPoolAllocator);
         _avi->AddFrame(*_image.get());    

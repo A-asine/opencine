@@ -6,7 +6,7 @@
 
 #include <omp.h>
 #include <thread>
-
+#include <iostream>
 #include <Log/Logger.h>
 
 #include "ImageHelper.h"
@@ -50,17 +50,18 @@ void BayerFrameDownscaler::Extract(int jump) const
     int dataIndex = 0;
     for(index = 0; index < _size; index += jump)
     {
-
         _dataUL[dataIndex] = _outputData[index];
         _dataUR[dataIndex] = _outputData[index + 1];
         _dataLL[dataIndex] = _outputData[index + _width];
         _dataLR[dataIndex] = _outputData[index + _width + 1];
         dataIndex++;
+        
         if((index + jump) % _width == 0)
         {
             index += (jump - 1) * _width;
         }
     }
+    
     OC_LOG_INFO("R: " + std::to_string(sizeof(_dataRed) / sizeof(uint16_t)) +
                 " G: " + std::to_string(sizeof(_dataGreen) / sizeof(uint16_t)) +
                 " B: " + std::to_string(sizeof(_dataBlue) / sizeof(uint16_t)) + " index: " + std::to_string(index));
@@ -78,12 +79,18 @@ BayerFrameDownscaler::BayerFrameDownscaler() :
         _dataGreen(nullptr),
         _dataBlue(nullptr),
         _width(0),
-        _height(0)
+        _height(0),
+        _quality(1)
 {
 }
 
 BayerFrameDownscaler::~BayerFrameDownscaler()
 {
+}
+
+int BayerFrameDownscaler::GetQuality()
+{
+    return _quality;
 }
 
 // TODO: Add parameter of data length, it would simplify some processing
@@ -96,10 +103,9 @@ void BayerFrameDownscaler::SetData(uint8_t* data, OCImage& image, ImageFormat im
 
     _size = _width * _height;
 
-
     // Changes the resolution to half the width and height.
-    image.SetWidth(image.Width() / 2);
-    image.SetHeight(image.Height() / 2);
+    image.SetWidth(image.Width() / _quality);
+    image.SetHeight(image.Height() / _quality);
 
     _outputData = new uint16_t[_size];
 
@@ -114,7 +120,7 @@ void BayerFrameDownscaler::SetData(uint8_t* data, OCImage& image, ImageFormat im
 
     MapPatternToData();
 
-    OC_LOG_INFO("Width: " + std::to_string(_width) + " Height: " + std::to_string(_height));
+    OC_LOG_INFO("Width: " + std::to_string(_width) + "Height: " + std::to_string(_height));
 }
 
 void BayerFrameDownscaler::SetData(uint16_t* imageData, OCImage& image)
@@ -124,8 +130,8 @@ void BayerFrameDownscaler::SetData(uint16_t* imageData, OCImage& image)
 
     _size = _width * _height;
 
-    image.SetWidth(image.Width() / 2);
-    image.SetHeight(image.Height() / 2);
+    image.SetWidth(image.Width() / _quality);
+    image.SetHeight(image.Height() / _quality);
 
     _outputData = imageData;
 
@@ -159,7 +165,7 @@ void BayerFrameDownscaler::Process()
     OC_LOG_INFO("Extracting");
 
     // It currently skips 4 pixels (half the width and height), 2 is normal.
-    BayerFrameDownscaler::Extract(2);
+    BayerFrameDownscaler::Extract(_quality);
 
     OC_LOG_INFO("Extract finished");
 }

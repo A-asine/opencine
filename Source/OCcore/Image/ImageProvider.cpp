@@ -6,7 +6,7 @@
 
 #include <chrono>
 #include <string>
-
+#include <iostream> 
 #include "Log/Logger.h"
 
 #include "MLVLoader.h"
@@ -109,6 +109,7 @@ void ImageProvider::Load(std::string fileName, FileFormat format, OCImage& image
 
 void ImageProvider::ProcessFrame( unsigned int frameNumber, OCImage& image, RawPoolAllocator& allocator) const
 {    
+    std::cout << "1" << std::endl;  
     imageLoader->ProcessFrame(frameNumber, image, allocator);
 }
 

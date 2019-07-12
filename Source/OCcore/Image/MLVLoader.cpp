@@ -10,8 +10,6 @@
 
 #include "EndianHelper.h"
 
-#include "BayerFrameDownscaler.h"
-
 using namespace OC::Image;
 using namespace OC::DataProvider;
 
@@ -116,6 +114,12 @@ MLVLoader::MLVLoader()
     // more blocks, when required 
 }
 
+MLVLoader::~MLVLoader()
+{
+    delete frameProcessor;
+    delete[] _targetData; 
+}
+
 bool MLVLoader::CheckFormat(uint8_t* data, std::streamsize size)
 {
     bool result = false;
@@ -186,7 +190,8 @@ void MLVLoader::Load(uint8_t* data, unsigned int size, Image::OCImage& image, Ra
         }
     }
     
-    unsigned int frameSize = blockRAWI.xRes * blockRAWI.yRes;
+    _quality = frameProcessor->GetQuality();
+    unsigned int frameSize = (blockRAWI.xRes / _quality) * (blockRAWI.yRes / _quality);
     unsigned int imageDataSize = 0;
     ImageFormat imageFormat = ImageFormat::Integer12;  
   
@@ -194,23 +199,23 @@ void MLVLoader::Load(uint8_t* data, unsigned int size, Image::OCImage& image, Ra
     InitOCImage(image, blockRAWI.xRes, blockRAWI.yRes, blockRAWI.rawInfo.bits_per_pixel, imageDataSize, imageFormat);
 }
 
-void MLVLoader::ProcessFrame(unsigned int frameNumber , Image::OCImage& image, RawPoolAllocator& allocator)
-{          
+void MLVLoader::ProcessFrame(unsigned int frameNumber, Image::OCImage& image, RawPoolAllocator& allocator)
+{      
+     if(frameNumber == _sourceData.size()) return;  // remove it, when we fix the last frame problem of MLV;
+     
+     unsigned int dataSize = (blockRAWI.xRes / _quality) * (blockRAWI.yRes / _quality); 
+     
      if(allocator.GetState(frameNumber) == FrameState::Allocated)
      {  
          std::cout << "frame :" << frameNumber << "already present in Buffer" << std::endl; 
-      
          unsigned int index = allocator.GetBufferIndex(frameNumber);
-         image.SetRedChannel(allocator.GetData(index));
-         image.SetGreenChannel(allocator.GetData(index + 1));
-         image.SetBlueChannel(allocator.GetData(index + 2));
-         
+    
+         image.SetRedChannel(allocator.GetData(index, dataSize));
+         image.SetGreenChannel(allocator.GetData(index + 1, dataSize));
+         image.SetBlueChannel(allocator.GetData(index + 2, dataSize));
          return;
      }
-     
-     std::unique_ptr<BayerFrameDownscaler> frameProcessor(new BayerFrameDownscaler());
-     unsigned int dataSize = blockRAWI.xRes * blockRAWI.yRes; 
-     
+          
      unsigned int imageDataSize = 0;
      ImageFormat imageFormat = ImageFormat::Integer12;
       
@@ -220,15 +225,13 @@ void MLVLoader::ProcessFrame(unsigned int frameNumber , Image::OCImage& image, R
        
      image.SetRedChannel(allocator.Allocate(frameNumber, dataSize));
      image.SetGreenChannel(allocator.Allocate(frameNumber, dataSize));
-     image.SetBlueChannel(allocator.Allocate( frameNumber, dataSize)); 
+     image.SetBlueChannel(allocator.Allocate(frameNumber, dataSize)); 
     
      unsigned int offset = _sourceData[frameNumber - 1];       
 
      SwapEndianess16BitArray(&_targetData[offset], imageDataSize);
-
+      
      frameProcessor->SetData(&_targetData[offset], image, imageFormat);
-    //frameProcessor->SetLinearizationData(linearizationTable, linearizationLength);
+     //frameProcessor->SetLinearizationData(linearizationTable, linearizationLength);
      frameProcessor->Process();           
 }
-
-

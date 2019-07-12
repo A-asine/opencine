@@ -9,9 +9,6 @@
 
 #include "Log/Logger.h"
 
-//#include "BayerFrameDownscaler.h"
-#include "BayerFramePreProcessor.h"
-
 using namespace OC::DataProvider;
 using namespace OC::Image;
 
@@ -26,7 +23,9 @@ TIFFLoader::TIFFLoader() : _swapEndianess(false), _imageDataOffset(0), _bitsPerP
 }
 
 TIFFLoader::~TIFFLoader()
-{
+{ 
+   delete _frameProcessor;
+   delete[] _data;
 }
 
 void TIFFLoader::Cleanup() const
@@ -123,23 +122,24 @@ void TIFFLoader::FindMainImage(unsigned char* data, unsigned int& ifdOffset, uin
 }
 
 void TIFFLoader::Load(uint8_t* data, unsigned size, OCImage& image, RawPoolAllocator& allocator)
-{
-    if((data[0] << 8 | data[1]) == 0x4d4d && !IsBigEndianMachine())
+{   
+    _data = data;
+    if((_data[0] << 8 | _data[1]) == 0x4d4d && !IsBigEndianMachine())
     {
         _swapEndianess = true;
     }
 
-    TIFFHeader header = ProcessHeader(reinterpret_cast<char*>(data));
+    TIFFHeader header = ProcessHeader(reinterpret_cast<char*>(_data));
 
     uint16_t ifdCount = 0;
     unsigned int ifdOffset = header.IFDOffset;
 
-    FindMainImage(data, ifdOffset, ifdCount);
+    FindMainImage(_data, ifdOffset, ifdCount);
 
     std::unordered_map<int, std::string> tagNames = CreateTIFFTagMap();
     
     std::unordered_map<int, std::function<void(TIFFTag&)>> varMap;
-    ProcessTags(varMap, _bitsPerPixel, size, image, data);
+    ProcessTags(varMap, _bitsPerPixel, size, image);
 
     for(int i = 0; i < ifdCount; i++)
     {
@@ -157,9 +157,11 @@ void TIFFLoader::Load(uint8_t* data, unsigned size, OCImage& image, RawPoolAlloc
             (*it).second(tags[i]);
         }
     }
-
+    
+    _quality = _frameProcessor->GetQuality();
+    unsigned int frameSize = (image.Height() / _quality) * (image.Width() / _quality);
     _allocator = &allocator;
-    PreProcess(data, image);
+    _allocator->InitAllocator(_imageDataOffset, frameSize);
     
     Cleanup();
 }
@@ -193,7 +195,7 @@ void TIFFLoader::SwapTagEndianess(TIFFTag& tag) const
 }
 
 void TIFFLoader::ProcessTags(std::unordered_map<int, std::function<void(TIFFTag&)>>& varMap, ImageFormat& bitsPerPixel,
-                             unsigned int size, OCImage& image, unsigned char* data)
+                             unsigned int size, OCImage& image)
 {
     // std::unordered_map<int, std::function<void(TIFFTag&)>> varMap;
     varMap.insert(std::make_pair(256, [&image](TIFFTag& tag) { image.SetWidth(tag.DataOffset); }));
@@ -229,49 +231,34 @@ void TIFFLoader::ProcessTags(std::unordered_map<int, std::function<void(TIFFTag&
                                      linearizationLength = tag.DataCount;
                                      linearizationTable = new unsigned short[linearizationLength];
 
-                                     memcpy(linearizationTable, data + tag.DataOffset,
+                                     memcpy(linearizationTable, _data + tag.DataOffset,
                                             sizeof(unsigned short) * linearizationLength);
                                  }));
 
     varMap.insert(
         std::make_pair(258, [&bitsPerPixel](TIFFTag& tag) { bitsPerPixel = static_cast<ImageFormat>(tag.DataOffset); }));
 
-    varMap.insert(std::make_pair(273, [=](TIFFTag& tag) mutable { _imageDataOffset = tag.DataOffset; }));
+    varMap.insert(std::make_pair(273, [=](TIFFTag& tag) mutable { _imageDataOffset.push_back(tag.DataOffset); }));
 }
 
-void TIFFLoader::PreProcess(unsigned char* data, OCImage& image) const
+void TIFFLoader::ProcessFrame(unsigned int frameNumber, OCImage& image, RawPoolAllocator& allocator) 
 {
     auto start = std::chrono::high_resolution_clock::now();
+    unsigned int dataSize = (image.Width() / _quality)  * (image.Height() / _quality);
+        
+    _allocator->SetFrameInfo(frameNumber, FrameState::Allocated);
+    image.SetRedChannel(_allocator->Allocate(frameNumber, dataSize));
+    image.SetGreenChannel(_allocator->Allocate(frameNumber, dataSize));
+    image.SetBlueChannel(_allocator->Allocate(frameNumber, dataSize));
     
-    std::unique_ptr<BayerFramePreProcessor> frameProcessor(new BayerFramePreProcessor());
+    unsigned int offset = _imageDataOffset[frameNumber - 1];
+    _frameProcessor->SetData(&_data[offset], image, image.Format());
     
-    unsigned int dataSize = image.Width() * image.Height();
-    
-    image.SetRedChannel(_allocator->Allocate(1, dataSize));
-    image.SetGreenChannel(_allocator->Allocate(1, dataSize));
-    image.SetBlueChannel(_allocator->Allocate(1, dataSize));
-
-    frameProcessor->SetData(&data[_imageDataOffset], image, image.Format());
-
-    frameProcessor->Process();
+    _frameProcessor->Process();
 
     auto diffTime = std::chrono::high_resolution_clock::now() - start;
     auto frameTime = std::chrono::duration_cast<std::chrono::milliseconds>(diffTime).count();
 
-    std::string log = "BayerFramePreProcessor: " + std::to_string(frameTime) + "ms";
+    std::string log = "BayerFrameDownscaler: " + std::to_string(frameTime) + "ms";
     OC_LOG_WARNING(log);
-
-
-    image.SetRedChannel(frameProcessor->GetDataRed());
-    image.SetGreenChannel(frameProcessor->GetDataGreen());
-    image.SetBlueChannel(frameProcessor->GetDataBlue());
 }
-
-void TIFFLoader::ProcessFrame(unsigned int frameNumber, OCImage& image, RawPoolAllocator& allocator)
-{
-
-   // add implementation
-}
-
-
-

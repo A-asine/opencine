@@ -14,6 +14,7 @@
 #include "OCcore_export.h"
 
 #include "Memory/StaticAllocator.h"
+#include "BayerFrameDownscaler.h"
 
 namespace OC
 {
@@ -45,9 +46,12 @@ namespace OC
         {
             bool _swapEndianess;
             TIFFTag* tags;
-
-            unsigned int _imageDataOffset;
-
+            
+            uint8_t* _data;
+            std::vector<unsigned int> _imageDataOffset;
+            BayerFrameDownscaler *_frameProcessor = new BayerFrameDownscaler();
+            int _quality;
+            
             OC::Image::ImageFormat _bitsPerPixel;
 
             TIFFHeader ProcessHeader(char* buffer) const;
@@ -61,10 +65,7 @@ namespace OC
             inline void SwapTagEndianess(TIFFTag& tag) const;
 
             void ProcessTags(std::unordered_map<int, std::function<void(TIFFTag&)>>& varMap, OC::Image::ImageFormat& bitsPerPixel,
-                             unsigned int size, OC::Image::OCImage& image, unsigned char* data);
-
-            void PreProcess(unsigned char* data, OC::Image::OCImage& image) const;
-
+                             unsigned int size, OC::Image::OCImage& image);
             void Cleanup() const;
 
         public:

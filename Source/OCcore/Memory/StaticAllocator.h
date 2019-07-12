@@ -18,14 +18,13 @@
 class OCCORE_EXPORT RawPoolAllocator : public IAllocator
 {
     uint8_t* _mem;
-    size_t   _currentOffset;
     
     unsigned int _frameCount;
     int _poolBlock;
     int _totalBlock;
     
-    std::unordered_map< unsigned int, FrameInfo> _frameMap; // frameNumber, frameInfo
-    std::unordered_map< int, std::pair<unsigned int, unsigned int> > _pointerMap; // index, (frameNumber, currentOffset)
+    std::unordered_map<unsigned int, FrameInfo> _frameMap; // frameNumber, frameInfo
+    std::vector<unsigned int> _pointerMap; // frameNumber
 
 public:
     RawPoolAllocator();
@@ -37,11 +36,11 @@ public:
     void Deallocate(void* p) override;
     size_t allocated_size(void* p) override;
     
-    void* GetData(int index);
+    void* GetData(int index, unsigned int size);
     int   GetFrameCount();
     unsigned int GetBufferIndex(unsigned int frameNumber);
     FrameState GetState(unsigned int frameNumber); 
-    void SetFrameInfo(unsigned int frameNumber, FrameState state);   
+    void SetFrameInfo(unsigned int frameNumber, FrameState state);    
 };
 
 #endif // STATICALLOCATOR_H
