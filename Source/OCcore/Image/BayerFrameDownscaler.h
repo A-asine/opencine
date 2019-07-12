@@ -27,7 +27,6 @@ class BayerFrameDownscaler : public OC::DataProvider::IFrameProcessor
 
     unsigned int _width;
     unsigned int _height;
-    int _quality;
     
     OC::Image::ImageFormat _imageFormat;
 
@@ -39,8 +38,7 @@ public:
     BayerFrameDownscaler();
 
     ~BayerFrameDownscaler();
-    
-    int GetQuality();
+   
     void SetData(uint8_t* data, OC::Image::OCImage& image, OC::Image::ImageFormat imageFormat) override;
     void SetData(uint16_t* imageData, OC::Image::OCImage& image) override;
 

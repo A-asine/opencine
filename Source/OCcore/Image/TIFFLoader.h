@@ -50,8 +50,7 @@ namespace OC
             uint8_t* _data;
             std::vector<unsigned int> _imageDataOffset;
             BayerFrameDownscaler *_frameProcessor = new BayerFrameDownscaler();
-            int _quality;
-            
+           
             OC::Image::ImageFormat _bitsPerPixel;
 
             TIFFHeader ProcessHeader(char* buffer) const;

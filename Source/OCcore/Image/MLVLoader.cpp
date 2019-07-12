@@ -190,8 +190,7 @@ void MLVLoader::Load(uint8_t* data, unsigned int size, Image::OCImage& image, Ra
         }
     }
     
-    _quality = frameProcessor->GetQuality();
-    unsigned int frameSize = (blockRAWI.xRes / _quality) * (blockRAWI.yRes / _quality);
+    unsigned int frameSize = blockRAWI.xRes * blockRAWI.yRes;
     unsigned int imageDataSize = 0;
     ImageFormat imageFormat = ImageFormat::Integer12;  
   
@@ -203,7 +202,7 @@ void MLVLoader::ProcessFrame(unsigned int frameNumber, Image::OCImage& image, Ra
 {      
      if(frameNumber == _sourceData.size()) return;  // remove it, when we fix the last frame problem of MLV;
      
-     unsigned int dataSize = (blockRAWI.xRes / _quality) * (blockRAWI.yRes / _quality); 
+     unsigned int dataSize = blockRAWI.xRes * blockRAWI.yRes; 
      
      if(allocator.GetState(frameNumber) == FrameState::Allocated)
      {  

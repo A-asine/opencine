@@ -158,8 +158,7 @@ void TIFFLoader::Load(uint8_t* data, unsigned size, OCImage& image, RawPoolAlloc
         }
     }
     
-    _quality = _frameProcessor->GetQuality();
-    unsigned int frameSize = (image.Height() / _quality) * (image.Width() / _quality);
+    unsigned int frameSize = image.Height() * image.Width();
     _allocator = &allocator;
     _allocator->InitAllocator(_imageDataOffset, frameSize);
     
@@ -244,7 +243,7 @@ void TIFFLoader::ProcessTags(std::unordered_map<int, std::function<void(TIFFTag&
 void TIFFLoader::ProcessFrame(unsigned int frameNumber, OCImage& image, RawPoolAllocator& allocator) 
 {
     auto start = std::chrono::high_resolution_clock::now();
-    unsigned int dataSize = (image.Width() / _quality)  * (image.Height() / _quality);
+    unsigned int dataSize = image.Width() * image.Height();
         
     _allocator->SetFrameInfo(frameNumber, FrameState::Allocated);
     image.SetRedChannel(_allocator->Allocate(frameNumber, dataSize));
