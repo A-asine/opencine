@@ -58,7 +58,6 @@ void* RawPoolAllocator::Allocate(unsigned int frameNumber, size_t size)
     }
     
 	_pointerMap[_poolBlock] = frameNumber;
-	
 	void* ptr = &_mem[_poolBlock * size];
     _poolBlock += 1; 
     
