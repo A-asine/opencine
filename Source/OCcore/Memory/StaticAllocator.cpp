@@ -7,13 +7,14 @@
 
 #include "StaticAllocator.h"
 
-#define SzLimit 15 * 1024 * 1024
+#define SIZE_LIMIT 512 * 1024 * 1024
+#define FRAME_ABSENT -1
 
 RawPoolAllocator::RawPoolAllocator() :   
     _mem(nullptr),
-    _frameCount(0),
-    _poolBlock(0),
-    _totalBlock(0)
+    _chunkSize(0),
+    _totalBlock(0),
+    _poolBlock(0)
 {
 }
 
@@ -25,86 +26,57 @@ RawPoolAllocator::~RawPoolAllocator()
 	}
 }
 
-void RawPoolAllocator::InitAllocator(std::vector<unsigned int>& frameOffset, unsigned int frameSize)
+void RawPoolAllocator::InitAllocator(unsigned int frameSize, OC::Image::VideoClip &videoClip)
 {
-    _frameCount = frameOffset.size();  
- 
-    for(unsigned int frameNumber = 1; frameNumber <= _frameCount; frameNumber++)
-    {  
-       FrameInfo frameInfo(frameOffset[frameNumber - 1], -1, frameSize);
-       _frameMap.insert(std::make_pair(frameNumber, frameInfo));
-    } 
+    _chunkSize = frameSize;
     
-    int numBlock = 0;
-    // bufferSize will in multiple of frameSize
-    numBlock = (frameSize * _frameCount) <= SzLimit ?  _frameCount : (SzLimit / frameSize);
+    _mem = new uint8_t[SIZE_LIMIT - SIZE_LIMIT % _chunkSize];
+    _totalBlock = (SIZE_LIMIT / _chunkSize) * 3;
     
-    _totalBlock = numBlock * 3;
-    // Each Frame will contain three channels
-    _mem = new uint8_t[numBlock * frameSize * 3];
-    _pointerMap.resize(_totalBlock);  
-      
-    OC_LOG_INFO("Total size of buffer: " + std::to_string(numBlock * frameSize * 3) 
+    _pointerMap.resize(_totalBlock, FRAME_ABSENT);
+    _videoClip = videoClip;
+    
+    OC_LOG_INFO("Total size of buffer: " + std::to_string(SIZE_LIMIT - SIZE_LIMIT % _chunkSize) 
                  + " | total number of blocks: " + std::to_string(_totalBlock)); 
 }
 
-void* RawPoolAllocator::Allocate(unsigned int frameNumber, size_t size)
+void* RawPoolAllocator::Allocate(unsigned int frameNumber)
 {   
-    if(_pointerMap[_poolBlock] != 0)
+    if(_pointerMap[_poolBlock] != FRAME_ABSENT) // Free the Block
     { 
-      unsigned int framePresent = _pointerMap[_poolBlock]; 
-      _frameMap[framePresent].SetBufferIndex(-1);
-      _frameMap[framePresent].SetFrameState(FrameState::Free);
+        unsigned int presentFrame = _pointerMap[_poolBlock]; 
+    
+        _videoClip.SetBufferIndex(presentFrame, FRAME_ABSENT);
+        _videoClip.SetFrameState(presentFrame, OC::Image::FrameState::Free);
     }
     
-	_pointerMap[_poolBlock] = frameNumber;
-	void* ptr = &_mem[_poolBlock * size];
-    _poolBlock += 1; 
+    CheckBufferSize();
     
+	_pointerMap[_poolBlock] = frameNumber;
+	void* ptr = &_mem[_poolBlock * _chunkSize];
+	
+	if(_poolBlock % 3 == 0)   // Allocate a new Block 
+	{
+	    _videoClip.SetBufferIndex(frameNumber, _poolBlock);
+	    _videoClip.SetFrameState(frameNumber, OC::Image::FrameState::Allocate);   
+	}
+	
+    _poolBlock += 1; 
 	return ptr;
 }
 
-void RawPoolAllocator::SetFrameInfo(unsigned int frameNumber, FrameState state)
-{   
+void RawPoolAllocator::CheckBufferSize()
+{
     if(_poolBlock == _totalBlock)
-    {        
-      std::cout << std::endl <<"Buffer has No space left, start from PoolBlock 0 again" << std::endl;
-      _poolBlock = 0;              // for looping purpose
-    }
-     
-    std::string redPool   = std::to_string(_poolBlock);
-    std::string greenPool = std::to_string(_poolBlock + 1);
-    std::string bluePool  = std::to_string(_poolBlock + 2);
-    
-    std::string poolBlock = "PoolBlock :" + redPool + "," + greenPool + "," + bluePool + "," 
-                             + "are now occupied with R,G,B channel of frame :" + std::to_string(frameNumber);
-                                 
-    OC_LOG_INFO(poolBlock);
-     
-    _frameMap[frameNumber].SetBufferIndex(_poolBlock); // set index of red channel only
-    _frameMap[frameNumber].SetFrameState(state); 
+    {  
+       _poolBlock = 0;
+    }   
 }
 
-
-unsigned int RawPoolAllocator::GetBufferIndex(unsigned int frameNumber)
-{   
-    return _frameMap[frameNumber].GetBufferIndex();
-}
-
-FrameState RawPoolAllocator::GetState(unsigned int frameNumber)
+void* RawPoolAllocator::GetBlockData(unsigned int poolBlock)
 {
-    return _frameMap[frameNumber].GetFrameState();
-} 
-
-void* RawPoolAllocator::GetData(int index, unsigned int size)
-{
-    void* ptr = &_mem[index * size];
+    void* ptr = &_mem[poolBlock * _chunkSize];
     return ptr;
-}
- 
-int RawPoolAllocator::GetFrameCount()
-{
-    return _frameCount;
 }
 
 void RawPoolAllocator::Deallocate(void* p)
@@ -116,4 +88,3 @@ size_t RawPoolAllocator::allocated_size(void* p)
 {
 	return 0;
 }
-

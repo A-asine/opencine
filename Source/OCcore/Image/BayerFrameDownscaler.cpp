@@ -6,7 +6,6 @@
 
 #include <omp.h>
 #include <thread>
-#include <iostream>
 #include <Log/Logger.h>
 
 #include "ImageHelper.h"

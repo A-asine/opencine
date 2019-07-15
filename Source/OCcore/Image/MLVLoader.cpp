@@ -116,7 +116,7 @@ MLVLoader::MLVLoader()
 
 MLVLoader::~MLVLoader()
 {
-    delete frameProcessor;
+    delete _frameProcessor;
     delete[] _targetData; 
 }
 
@@ -161,7 +161,7 @@ void MLVLoader::InitOCImage(Image::OCImage& image, uint16_t width, uint16_t heig
    
 }
 
-void MLVLoader::Load(uint8_t* data, unsigned int size, Image::OCImage& image, RawPoolAllocator& allocator)
+void MLVLoader::Load(uint8_t* data, unsigned int size, Image::OCImage& image, Image::VideoClip &videoClip,RawPoolAllocator& allocator)
 {
     // TODO: Add handlng of endianess 
     unsigned int bufferPosition = 0;
@@ -193,25 +193,27 @@ void MLVLoader::Load(uint8_t* data, unsigned int size, Image::OCImage& image, Ra
     unsigned int frameSize = blockRAWI.xRes * blockRAWI.yRes;
     unsigned int imageDataSize = 0;
     ImageFormat imageFormat = ImageFormat::Integer12;  
-  
-    allocator.InitAllocator(_sourceData, frameSize);
     InitOCImage(image, blockRAWI.xRes, blockRAWI.yRes, blockRAWI.rawInfo.bits_per_pixel, imageDataSize, imageFormat);
+    
+    unsigned int frameCount = _sourceData.size();
+    videoClip.InitVideoClip(frameCount);
+    allocator.InitAllocator(frameSize, videoClip);
 }
 
-void MLVLoader::ProcessFrame(unsigned int frameNumber, Image::OCImage& image, RawPoolAllocator& allocator)
+void MLVLoader::ProcessFrame(unsigned int frameNumber, Image::OCImage& image, Image::VideoClip &videoClip,RawPoolAllocator& allocator)
 {      
      if(frameNumber == _sourceData.size()) return;  // remove it, when we fix the last frame problem of MLV;
      
      unsigned int dataSize = blockRAWI.xRes * blockRAWI.yRes; 
      
-     if(allocator.GetState(frameNumber) == FrameState::Allocated)
+     if(videoClip.GetFrameState(frameNumber) == OC::Image::FrameState::Allocate)
      {  
          std::cout << "frame :" << frameNumber << "already present in Buffer" << std::endl; 
-         unsigned int index = allocator.GetBufferIndex(frameNumber);
+         unsigned int index = videoClip.GetBufferIndex(frameNumber);
     
-         image.SetRedChannel(allocator.GetData(index, dataSize));
-         image.SetGreenChannel(allocator.GetData(index + 1, dataSize));
-         image.SetBlueChannel(allocator.GetData(index + 2, dataSize));
+         image.SetRedChannel(allocator.GetBlockData(index));
+         image.SetGreenChannel(allocator.GetBlockData(index + 1));
+         image.SetBlueChannel(allocator.GetBlockData(index + 2));
          return;
      }
           
@@ -220,17 +222,15 @@ void MLVLoader::ProcessFrame(unsigned int frameNumber, Image::OCImage& image, Ra
       
      InitOCImage(image, blockRAWI.xRes, blockRAWI.yRes, blockRAWI.rawInfo.bits_per_pixel, imageDataSize, imageFormat);
      
-     allocator.SetFrameInfo(frameNumber, FrameState::Allocated);
-       
-     image.SetRedChannel(allocator.Allocate(frameNumber, dataSize));
-     image.SetGreenChannel(allocator.Allocate(frameNumber, dataSize));
-     image.SetBlueChannel(allocator.Allocate(frameNumber, dataSize)); 
+     image.SetRedChannel(allocator.Allocate(frameNumber));
+     image.SetGreenChannel(allocator.Allocate(frameNumber));
+     image.SetBlueChannel(allocator.Allocate(frameNumber)); 
     
      unsigned int offset = _sourceData[frameNumber - 1];       
 
      SwapEndianess16BitArray(&_targetData[offset], imageDataSize);
       
-     frameProcessor->SetData(&_targetData[offset], image, imageFormat);
+     _frameProcessor->SetData(&_targetData[offset], image, imageFormat);
      //frameProcessor->SetLinearizationData(linearizationTable, linearizationLength);
-     frameProcessor->Process();           
+     _frameProcessor->Process();           
 }

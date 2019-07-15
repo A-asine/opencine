@@ -13,7 +13,7 @@ class IAllocator
 public:
     virtual ~IAllocator();
 
-    virtual void *Allocate(unsigned int frameNumber, size_t size /*, size_t align*/) = 0;
+    virtual void *Allocate(unsigned int frameNumber /*, size_t align*/) = 0;
     virtual void Deallocate(void *p) = 0;
     virtual size_t allocated_size(void *p) = 0;
 };

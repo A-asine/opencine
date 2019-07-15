@@ -64,7 +64,7 @@ bool ImageProvider::ReadBinaryFile(std::string fileName, std::streamsize& length
     return true;
 }
 
-void ImageProvider::Load(std::string fileName, FileFormat format, OCImage& image, RawPoolAllocator& allocator) const
+void ImageProvider::Load(std::string fileName, FileFormat format, OCImage& image, VideoClip &videoClip,RawPoolAllocator& allocator) const
 {
     std::streamsize length = 0;
     uint8_t* fileData = nullptr;
@@ -98,7 +98,7 @@ void ImageProvider::Load(std::string fileName, FileFormat format, OCImage& image
         }
     }
 
-    imageLoader->Load(fileData, length, image, allocator);
+    imageLoader->Load(fileData, length, image, videoClip, allocator);
 
     diffTime = std::chrono::high_resolution_clock::now() - start;
     frameTime = std::chrono::duration_cast<std::chrono::milliseconds>(diffTime).count();
@@ -107,10 +107,10 @@ void ImageProvider::Load(std::string fileName, FileFormat format, OCImage& image
     OC_LOG_INFO(log);
 }
 
-void ImageProvider::ProcessFrame( unsigned int frameNumber, OCImage& image, RawPoolAllocator& allocator) const
+void ImageProvider::ProcessFrame( unsigned int frameNumber, OCImage& image, VideoClip& videoClip, RawPoolAllocator& allocator) const
 {    
     std::cout << "1" << std::endl;  
-    imageLoader->ProcessFrame(frameNumber, image, allocator);
+    imageLoader->ProcessFrame(frameNumber, image, videoClip, allocator);
 }
 
 

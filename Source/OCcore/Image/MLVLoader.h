@@ -15,7 +15,7 @@
 
 #include "IImageLoader.h"
 #include "OCImage.h"
-
+#include "VideoClip.h"
 #include "mlv_structure_mod.h"
 
 typedef std::function < void(uint8_t*, unsigned int&, mlv_hdr_t& )> MLVFunc;
@@ -36,8 +36,8 @@ namespace OC
             uint8_t* _targetData;
             std::vector<unsigned int> _sourceData;
             std::unordered_map<std::string, MLVFunc> mlvFunc; 
-            BayerFrameDownscaler* frameProcessor = new BayerFrameDownscaler();
-            int _quality;
+            
+            BayerFrameDownscaler* _frameProcessor = new BayerFrameDownscaler();
             
             mlv_file_hdr_t ReadHeader(uint8_t* buffer, unsigned int& bufferPosition);
             mlv_hdr_t ReadBlockHeader(uint8_t* buffer, unsigned int& bufferPosition);
@@ -53,9 +53,12 @@ namespace OC
         public:
             MLVLoader();
             ~MLVLoader();
-            void Load(uint8_t* data, unsigned int size, Image::OCImage& image, RawPoolAllocator& allocator) override;
-            void ProcessFrame(unsigned int frameNumber, Image::OCImage& image, RawPoolAllocator& allocator) override;
-            
+            void Load(uint8_t* data, unsigned int size, Image::OCImage& image, Image::VideoClip &videoClip, 
+                     RawPoolAllocator& allocator) override;
+                     
+            void ProcessFrame(unsigned int frameNumber, Image::OCImage& image, Image::VideoClip &videoClip,
+                              RawPoolAllocator& allocator) override;
+                              
             bool CheckFormat(uint8_t* data, std::streamsize size);
         };
     }

@@ -121,7 +121,7 @@ void TIFFLoader::FindMainImage(unsigned char* data, unsigned int& ifdOffset, uin
     }
 }
 
-void TIFFLoader::Load(uint8_t* data, unsigned size, OCImage& image, RawPoolAllocator& allocator)
+void TIFFLoader::Load(uint8_t* data, unsigned size, OCImage& image, VideoClip &videoClip, RawPoolAllocator& allocator)
 {   
     _data = data;
     if((_data[0] << 8 | _data[1]) == 0x4d4d && !IsBigEndianMachine())
@@ -160,7 +160,10 @@ void TIFFLoader::Load(uint8_t* data, unsigned size, OCImage& image, RawPoolAlloc
     
     unsigned int frameSize = image.Height() * image.Width();
     _allocator = &allocator;
-    _allocator->InitAllocator(_imageDataOffset, frameSize);
+    
+    unsigned int frameCount = _imageDataOffset.size();
+    videoClip.InitVideoClip(frameCount);
+    _allocator->InitAllocator(frameSize, videoClip);
     
     Cleanup();
 }
@@ -240,15 +243,14 @@ void TIFFLoader::ProcessTags(std::unordered_map<int, std::function<void(TIFFTag&
     varMap.insert(std::make_pair(273, [=](TIFFTag& tag) mutable { _imageDataOffset.push_back(tag.DataOffset); }));
 }
 
-void TIFFLoader::ProcessFrame(unsigned int frameNumber, OCImage& image, RawPoolAllocator& allocator) 
+void TIFFLoader::ProcessFrame(unsigned int frameNumber, OCImage& image, VideoClip& videoClip, RawPoolAllocator& allocator) 
 {
     auto start = std::chrono::high_resolution_clock::now();
     unsigned int dataSize = image.Width() * image.Height();
         
-    _allocator->SetFrameInfo(frameNumber, FrameState::Allocated);
-    image.SetRedChannel(_allocator->Allocate(frameNumber, dataSize));
-    image.SetGreenChannel(_allocator->Allocate(frameNumber, dataSize));
-    image.SetBlueChannel(_allocator->Allocate(frameNumber, dataSize));
+    image.SetRedChannel(_allocator->Allocate(frameNumber));
+    image.SetGreenChannel(_allocator->Allocate(frameNumber));
+    image.SetBlueChannel(_allocator->Allocate(frameNumber));
     
     unsigned int offset = _imageDataOffset[frameNumber - 1];
     _frameProcessor->SetData(&_data[offset], image, image.Format());

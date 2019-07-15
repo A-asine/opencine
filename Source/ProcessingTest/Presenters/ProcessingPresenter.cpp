@@ -29,6 +29,7 @@
 #include "Image/RawDump.h"
 #include <Log/Logger.h>
 #include <Memory/StaticAllocator.h>
+#include <Image/VideoClip.h>
 
 using namespace OC::DataProvider;
 using namespace OC::Image;
@@ -57,16 +58,17 @@ ProcessingPresenter::ProcessingPresenter(IProcessingView& view) : _currentDebaye
 void ProcessingPresenter::Show()
 {
     RawPoolAllocator* poolAllocator = new RawPoolAllocator();
-
+    OC::Image::VideoClip* videoClip = new VideoClip();
+    
     OC_LOG_INFO("Loading File");
     // File format is set to "unknown" to let OC determine it automatically
-    provider->Load(_currentFilePath, FileFormat::Unknown, *_image.get(), *poolAllocator);
+    provider->Load(_currentFilePath, FileFormat::Unknown, *_image.get(), *videoClip,*poolAllocator);
 
     OC_LOG_INFO("Loading finished");
     
     auto start = std::chrono::high_resolution_clock::now();
       
-    frameCount = poolAllocator->GetFrameCount();
+    frameCount = videoClip->GetFrameCount();
     
     for(unsigned int frameNumber = 1; frameNumber <= frameCount; frameNumber++)
     {
@@ -75,7 +77,7 @@ void ProcessingPresenter::Show()
       std::string frameLog = "processing Frame No: " + std::to_string(frameNumber); 
       OC_LOG_INFO(frameLog);
       
-      provider->ProcessFrame(frameNumber, *_image.get(), *poolAllocator); 
+      provider->ProcessFrame(frameNumber, *_image.get(), *videoClip, *poolAllocator); 
 
       _view->SetFrame(*_image.get());
       _view->EnableRendering(true);
@@ -93,13 +95,14 @@ void ProcessingPresenter::Show()
 void ProcessingPresenter::FrameServe()
 {
     RawPoolAllocator* aviPoolAllocator = new RawPoolAllocator();
-    provider->Load(_currentFilePath, FileFormat::Unknown, *_image.get(), *aviPoolAllocator);
+    OC::Image::VideoClip* videoClip    = new VideoClip();
+    provider->Load(_currentFilePath, FileFormat::Unknown, *_image.get(), *videoClip, *aviPoolAllocator);
     
     _avi = std::make_shared<AVIContainer>(_image->Width() / 2, _image->Height() / 2, 30, frameCount);
     
     for(unsigned int frameNumber = 1; frameNumber <= frameCount; frameNumber++)
     { 
-        provider->ProcessFrame(frameNumber, *_image.get(), *aviPoolAllocator);
+        provider->ProcessFrame(frameNumber, *_image.get(), *videoClip, *aviPoolAllocator);
         _avi->AddFrame(*_image.get());    
     } 
     

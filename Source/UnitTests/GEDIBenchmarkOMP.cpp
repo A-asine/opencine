@@ -4,6 +4,7 @@
 
 #include "../OCcore/Image/GEDIDebayerOMP.h"
 #include "../OCcore/Image/ImageProvider.h"
+#include "../OCcore/Image/VideoClip.h"
 #include "../OCcore/Log/Logger.h"
 #include "../OCcore/Memory/StaticAllocator.h"
 
@@ -12,12 +13,15 @@
 TEST_CASE("GEDI OMP Benchmark", "[OC::Image]")
 {
     RawPoolAllocator* poolAllocator = new RawPoolAllocator();
-
+    
     std::unique_ptr<OC::Image::OCImage> image(new OC::Image::OCImage());
-
+    std::unique_ptr<OC::Image::VideoClip> videoClip(new OC::Image::VideoClip());
+    
     OC_LOG_INFO("Loading image.");
+    
     std::unique_ptr<OC::DataProvider::ImageProvider> provider(new OC::DataProvider::ImageProvider());
-    provider->Load("bench_frame.dng", OC::Image::FileFormat::DNG, *image.get(), *poolAllocator);
+    provider->Load("bench_frame.dng", OC::Image::FileFormat::DNG, *image.get(), *videoClip, *poolAllocator);
+    
     OC_LOG_INFO("Load finished.");
 
     OC_LOG_INFO("Benchmarking...");

@@ -11,6 +11,7 @@
 
 #include <Image/ImageProvider.h>
 #include <Image/OCImage.h>
+#include <Image/VideoClip.h>
 #include <Image/ThumbnailProvider.h>
 
 #include "OCui_export.h"

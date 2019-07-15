@@ -6,41 +6,33 @@
 #define STATICALLOCATOR_H
 
 #include <vector>
-#include <utility>
-#include <stdint.h>
-#include <unordered_map>
+#include "../Image/VideoClip.h"
 
-#include "IAllocator.h"
-#include "FrameInfo.h"
-
+#include "IAllocator.h" 
 #include "OCcore_export.h"
 
 class OCCORE_EXPORT RawPoolAllocator : public IAllocator
 {
     uint8_t* _mem;
-    
-    unsigned int _frameCount;
-    int _poolBlock;
-    int _totalBlock;
-    
-    std::unordered_map<unsigned int, FrameInfo> _frameMap; // frameNumber, frameInfo
+    unsigned int _chunkSize;
     std::vector<unsigned int> _pointerMap; // frameNumber
-
+    
+    unsigned int _totalBlock;
+    unsigned int _poolBlock;
+    
+    OC::Image::VideoClip _videoClip;
+    
 public:
     RawPoolAllocator();
     ~RawPoolAllocator();
    
-    void InitAllocator(std::vector<unsigned int>&, unsigned int frameSize);
+    void InitAllocator(unsigned int frameSize, OC::Image::VideoClip& videoClip);
+    void* GetBlockData(unsigned int poolBlock);
+    void CheckBufferSize();
     
-    void* Allocate(unsigned int frameNumber, size_t size) override;
+    void* Allocate(unsigned int frameNumber) override;
     void Deallocate(void* p) override;
     size_t allocated_size(void* p) override;
-    
-    void* GetData(int index, unsigned int size);
-    int   GetFrameCount();
-    unsigned int GetBufferIndex(unsigned int frameNumber);
-    FrameState GetState(unsigned int frameNumber); 
-    void SetFrameInfo(unsigned int frameNumber, FrameState state);    
 };
 
 #endif // STATICALLOCATOR_H
