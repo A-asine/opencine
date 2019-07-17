@@ -22,6 +22,7 @@ const unsigned int AVIStreamHeaderSize  = sizeof(AVIStreamHeader);
 const unsigned int BitmapInfoHeaderSize = sizeof(BitmapInfoHeader);
 
 #define BIND_FUNC(x) std::bind(&AVIContainer::x, this, std::placeholders::_1, std::placeholders::_2)
+#define HEADERSIZE 220
 
 AVIContainer::AVIContainer(int width, int height, int framesPerSecond, int frameCount) :
 	_width(width),
@@ -30,7 +31,7 @@ AVIContainer::AVIContainer(int width, int height, int framesPerSecond, int frame
 	_frameCount(frameCount),
 	_frameSize(width * height * 3) // 3 -> RGB
 {
-	_dataBuffer = new uint8_t[220]; // 220 byte for headers
+	_dataBuffer = new uint8_t[HEADERSIZE]; // 220 byte for headers
 
 	_rootNode = new Node(BIND_FUNC(CreateRIFFHeader), true);
 	Node* hdrlNode = _rootNode->AddChild(BIND_FUNC(CreateHDRLHeader), true);
@@ -43,12 +44,19 @@ AVIContainer::AVIContainer(int width, int height, int framesPerSecond, int frame
 	BuildAVI(_dataBuffer, _rootNode);
 	
 	WriteToHeaders();
+	
+	_fileSize = HEADERSIZE + frameCount * (AVIChunkSize + _frameSize);
 }
 
 AVIContainer::~AVIContainer()
 {
-   delete []_dataBuffer; 
-   _file.close();
+    delete []_dataBuffer; 
+    _file.close();
+}
+
+unsigned int AVIContainer::GetFileSize()
+{
+    return _fileSize;
 }
 
 void AVIContainer::SetFourCC(uint32_t* fourCC, const char value[4])

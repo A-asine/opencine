@@ -42,16 +42,15 @@ QImage QMLThumbnailProvider::requestImage(const QString& id, QSize* size, const 
     QImage image;
 
     OCImage* _image = new OCImage();
-    VideoClip* _videoClip = new VideoClip(); 
     //_image.reset(new OCImage());
 
     if(id.toLower().endsWith(".dng"))
     {
-        _provider->Load(id.toStdString(), FileFormat::DNG, *_image, *_videoClip, *_allocator);
+        _provider->Load(id.toStdString(), FileFormat::DNG, *_image, *_allocator);
     }
     else if(id.toLower().endsWith(".mlv"))
     {
-        _provider->Load(id.toStdString(), FileFormat::MLV, *_image, *_videoClip, *_allocator);
+        _provider->Load(id.toStdString(), FileFormat::MLV, *_image, *_allocator);
     }
     else if(id.toLower().endsWith(".mov"))
     {

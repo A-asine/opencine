@@ -12,6 +12,7 @@
 
 #include "Presenters/ProcessingPresenter.h"
 #include "Views/ProcessingView.h"
+#include "AVIEncode/AVIContainer.h"
 
 #include "Log/Logger.h"
 #include <Image/FramePool.h>
@@ -20,7 +21,7 @@ class ProcessingTest : public OCui::GUIApplication
 {
     std::shared_ptr<IProcessingView> _view;
     std::shared_ptr<IProcessingPresenter> _presenter;
-
+    
 public:
     ProcessingTest(int& argc, char** argv) : OCui::GUIApplication(argc, argv, "ProcessingTest")
     {

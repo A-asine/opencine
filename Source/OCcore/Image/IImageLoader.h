@@ -20,11 +20,8 @@ namespace OC
             {
             }
 
-            virtual void Load(uint8_t* data, unsigned int size, OC::Image::OCImage& image, 
-                              OC::Image::VideoClip &videoClip, RawPoolAllocator& allocator) = 0;
-            
-            virtual void ProcessFrame(unsigned int frameNumber, OC::Image::OCImage& image, 
-                                      OC::Image::VideoClip &videoClip, RawPoolAllocator& allocator) = 0;
+            virtual void Load(uint8_t* data, unsigned int size, OC::Image::OCImage& image, RawPoolAllocator& allocator) = 0;
+            virtual void ProcessFrame(unsigned int frameNumber, OC::Image::OCImage& image, RawPoolAllocator& allocator) = 0;
             virtual bool CheckFormat(uint8_t* data, std::streamsize size) = 0;
         };
     }

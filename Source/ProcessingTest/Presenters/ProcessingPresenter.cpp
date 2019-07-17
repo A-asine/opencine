@@ -58,35 +58,34 @@ ProcessingPresenter::ProcessingPresenter(IProcessingView& view) : _currentDebaye
 void ProcessingPresenter::Show()
 {
     RawPoolAllocator* poolAllocator = new RawPoolAllocator();
-    OC::Image::VideoClip* videoClip = new VideoClip();
     
     OC_LOG_INFO("Loading File");
     // File format is set to "unknown" to let OC determine it automatically
-    provider->Load(_currentFilePath, FileFormat::Unknown, *_image.get(), *videoClip,*poolAllocator);
+    provider->Load(_currentFilePath, FileFormat::Unknown, *_image.get(), *poolAllocator);
 
     OC_LOG_INFO("Loading finished");
     
     auto start = std::chrono::high_resolution_clock::now();
-      
-    frameCount = videoClip->GetFrameCount();
+    
+    frameCount = poolAllocator->GetFrameCount();
     
     for(unsigned int frameNumber = 1; frameNumber <= frameCount; frameNumber++)
     {
-      _view->EnableRendering(false);
+        _view->EnableRendering(false);
       
-      std::string frameLog = "processing Frame No: " + std::to_string(frameNumber); 
-      OC_LOG_INFO(frameLog);
+        std::string frameLog = "processing Frame No: " + std::to_string(frameNumber); 
+        OC_LOG_INFO(frameLog);
       
-      provider->ProcessFrame(frameNumber, *_image.get(), *videoClip, *poolAllocator); 
+        provider->ProcessFrame(frameNumber, *_image.get(), *poolAllocator); 
 
-      _view->SetFrame(*_image.get());
-      _view->EnableRendering(true);
+        _view->SetFrame(*_image.get());
+        _view->EnableRendering(true);
     
-      QTime dieTime= QTime::currentTime().addMSecs(30);
-      while (QTime::currentTime() < dieTime)
-      QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+        QTime dieTime= QTime::currentTime().addMSecs(30);
+        while (QTime::currentTime() < dieTime)
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
       
-      OC_LOG_INFO("Processing finished");
+        OC_LOG_INFO("Processing finished");
     }  
    
     FrameServe();	
@@ -95,14 +94,14 @@ void ProcessingPresenter::Show()
 void ProcessingPresenter::FrameServe()
 {
     RawPoolAllocator* aviPoolAllocator = new RawPoolAllocator();
-    OC::Image::VideoClip* videoClip    = new VideoClip();
-    provider->Load(_currentFilePath, FileFormat::Unknown, *_image.get(), *videoClip, *aviPoolAllocator);
+    
+    provider->Load(_currentFilePath, FileFormat::Unknown, *_image.get(), *aviPoolAllocator);
     
     _avi = std::make_shared<AVIContainer>(_image->Width() / 2, _image->Height() / 2, 30, frameCount);
     
     for(unsigned int frameNumber = 1; frameNumber <= frameCount; frameNumber++)
     { 
-        provider->ProcessFrame(frameNumber, *_image.get(), *videoClip, *aviPoolAllocator);
+        provider->ProcessFrame(frameNumber, *_image.get(), *aviPoolAllocator);
         _avi->AddFrame(*_image.get());    
     } 
     

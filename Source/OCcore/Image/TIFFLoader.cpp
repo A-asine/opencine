@@ -121,7 +121,7 @@ void TIFFLoader::FindMainImage(unsigned char* data, unsigned int& ifdOffset, uin
     }
 }
 
-void TIFFLoader::Load(uint8_t* data, unsigned size, OCImage& image, VideoClip &videoClip, RawPoolAllocator& allocator)
+void TIFFLoader::Load(uint8_t* data, unsigned size, OCImage& image, RawPoolAllocator& allocator)
 {   
     _data = data;
     if((_data[0] << 8 | _data[1]) == 0x4d4d && !IsBigEndianMachine())
@@ -162,8 +162,8 @@ void TIFFLoader::Load(uint8_t* data, unsigned size, OCImage& image, VideoClip &v
     _allocator = &allocator;
     
     unsigned int frameCount = _imageDataOffset.size();
-    videoClip.InitVideoClip(frameCount);
-    _allocator->InitAllocator(frameSize, videoClip);
+    _videoClip.InitVideoClip(frameCount);
+    _allocator->InitAllocator(frameSize, frameCount);
     
     Cleanup();
 }
@@ -243,11 +243,14 @@ void TIFFLoader::ProcessTags(std::unordered_map<int, std::function<void(TIFFTag&
     varMap.insert(std::make_pair(273, [=](TIFFTag& tag) mutable { _imageDataOffset.push_back(tag.DataOffset); }));
 }
 
-void TIFFLoader::ProcessFrame(unsigned int frameNumber, OCImage& image, VideoClip& videoClip, RawPoolAllocator& allocator) 
+void TIFFLoader::ProcessFrame(unsigned int frameNumber, OCImage& image, RawPoolAllocator& allocator) 
 {
     auto start = std::chrono::high_resolution_clock::now();
     unsigned int dataSize = image.Width() * image.Height();
-        
+    
+    _allocator->CheckBufferSize();
+    _allocator->SetFrameInfo(frameNumber, _videoClip);
+    
     image.SetRedChannel(_allocator->Allocate(frameNumber));
     image.SetGreenChannel(_allocator->Allocate(frameNumber));
     image.SetBlueChannel(_allocator->Allocate(frameNumber));

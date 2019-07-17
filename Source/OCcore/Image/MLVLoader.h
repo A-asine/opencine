@@ -36,6 +36,7 @@ namespace OC
             uint8_t* _targetData;
             std::vector<unsigned int> _sourceData;
             std::unordered_map<std::string, MLVFunc> mlvFunc; 
+            OC::Image::VideoClip _videoClip;
             
             BayerFrameDownscaler* _frameProcessor = new BayerFrameDownscaler();
             
@@ -53,12 +54,9 @@ namespace OC
         public:
             MLVLoader();
             ~MLVLoader();
-            void Load(uint8_t* data, unsigned int size, Image::OCImage& image, Image::VideoClip &videoClip, 
-                     RawPoolAllocator& allocator) override;
-                     
-            void ProcessFrame(unsigned int frameNumber, Image::OCImage& image, Image::VideoClip &videoClip,
-                              RawPoolAllocator& allocator) override;
-                              
+            
+            void Load(uint8_t* data, unsigned int size, Image::OCImage& image, RawPoolAllocator& allocator) override;
+            void ProcessFrame(unsigned int frameNumber, Image::OCImage& image, RawPoolAllocator& allocator) override;
             bool CheckFormat(uint8_t* data, std::streamsize size);
         };
     }

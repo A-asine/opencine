@@ -45,6 +45,7 @@ public:
 	void AddFrame(OC::Image::OCImage image);
 	void WriteToHeaders();
 	bool BuildAVI(uint8_t* dataBuffer, Node* node);
+	unsigned int GetFileSize();
 };
 
 #endif //AVIContainer_H

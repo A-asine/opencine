@@ -161,7 +161,7 @@ void MLVLoader::InitOCImage(Image::OCImage& image, uint16_t width, uint16_t heig
    
 }
 
-void MLVLoader::Load(uint8_t* data, unsigned int size, Image::OCImage& image, Image::VideoClip &videoClip,RawPoolAllocator& allocator)
+void MLVLoader::Load(uint8_t* data, unsigned int size, Image::OCImage& image, RawPoolAllocator& allocator)
 {
     // TODO: Add handlng of endianess 
     unsigned int bufferPosition = 0;
@@ -196,21 +196,22 @@ void MLVLoader::Load(uint8_t* data, unsigned int size, Image::OCImage& image, Im
     InitOCImage(image, blockRAWI.xRes, blockRAWI.yRes, blockRAWI.rawInfo.bits_per_pixel, imageDataSize, imageFormat);
     
     unsigned int frameCount = _sourceData.size();
-    videoClip.InitVideoClip(frameCount);
-    allocator.InitAllocator(frameSize, videoClip);
+    _videoClip.InitVideoClip(frameCount);
+    allocator.InitAllocator(frameSize, frameCount);
 }
 
-void MLVLoader::ProcessFrame(unsigned int frameNumber, Image::OCImage& image, Image::VideoClip &videoClip,RawPoolAllocator& allocator)
+void MLVLoader::ProcessFrame(unsigned int frameNumber, Image::OCImage& image, RawPoolAllocator& allocator)
 {      
      if(frameNumber == _sourceData.size()) return;  // remove it, when we fix the last frame problem of MLV;
      
      unsigned int dataSize = blockRAWI.xRes * blockRAWI.yRes; 
      
-     if(videoClip.GetFrameState(frameNumber) == OC::Image::FrameState::Allocate)
+     // If the Frame is already present, We can just get data from allocators 
+     if(_videoClip.GetFrameState(frameNumber) == OC::Image::FrameState::Allocate)
      {  
          std::cout << "frame :" << frameNumber << "already present in Buffer" << std::endl; 
-         unsigned int index = videoClip.GetBufferIndex(frameNumber);
-    
+         unsigned int index = _videoClip.GetBufferIndex(frameNumber);
+         
          image.SetRedChannel(allocator.GetBlockData(index));
          image.SetGreenChannel(allocator.GetBlockData(index + 1));
          image.SetBlueChannel(allocator.GetBlockData(index + 2));
@@ -222,6 +223,9 @@ void MLVLoader::ProcessFrame(unsigned int frameNumber, Image::OCImage& image, Im
       
      InitOCImage(image, blockRAWI.xRes, blockRAWI.yRes, blockRAWI.rawInfo.bits_per_pixel, imageDataSize, imageFormat);
      
+     allocator.CheckBufferSize();                     // check size of buffer
+     allocator.SetFrameInfo(frameNumber, _videoClip);  // to set info of any frame in videoClip class
+    
      image.SetRedChannel(allocator.Allocate(frameNumber));
      image.SetGreenChannel(allocator.Allocate(frameNumber));
      image.SetBlueChannel(allocator.Allocate(frameNumber)); 

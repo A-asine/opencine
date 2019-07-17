@@ -20,7 +20,6 @@ namespace OC
     namespace Image
     {
         class OCImage;
-        class VideoClip;
     }
   
     namespace DataProvider
@@ -40,11 +39,9 @@ namespace OC
             ImageProvider();
 
             bool ReadBinaryFile(std::string fileName, std::streamsize& length, unsigned char*& fileData) const;
-            void Load(std::string fileName, OC::Image::FileFormat format, OC::Image::OCImage& image, 
-                     OC::Image::VideoClip &videoClip, RawPoolAllocator& allocator) const;
+            void Load(std::string fileName, OC::Image::FileFormat format, OC::Image::OCImage& image, RawPoolAllocator& allocator) const;
             
-            void ProcessFrame(unsigned int frameNumber, OC::Image::OCImage& image, OC::Image::VideoClip& videoClip, 
-                             RawPoolAllocator& allocator) const;
+            void ProcessFrame(unsigned int frameNumber, OC::Image::OCImage& image, RawPoolAllocator& allocator) const;
         };
     }
 }

@@ -50,7 +50,6 @@ namespace OC
             uint8_t* _data;
             std::vector<unsigned int> _imageDataOffset;
             BayerFrameDownscaler *_frameProcessor = new BayerFrameDownscaler();
-            
             OC::Image::VideoClip _videoClip;
             
             OC::Image::ImageFormat _bitsPerPixel;
@@ -74,11 +73,8 @@ namespace OC
             virtual ~TIFFLoader();
 
             void ProcessIFDBlock() const;
-            void Load(uint8_t* data, unsigned int size, Image::OCImage& image, Image::VideoClip &videoClip,
-                     RawPoolAllocator& allocator) override;
-                     
-            void ProcessFrame(unsigned int frameNumber, Image::OCImage& image, Image::VideoClip &videoClip,
-                              RawPoolAllocator& allocator) override;
+            void Load(uint8_t* data, unsigned int size, Image::OCImage& image, RawPoolAllocator& allocator) override;
+            void ProcessFrame(unsigned int frameNumber, Image::OCImage& image, RawPoolAllocator& allocator) override;
             bool CheckFormat(uint8_t* data, std::streamsize size);
         };
     }
