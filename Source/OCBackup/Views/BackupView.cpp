@@ -50,7 +50,7 @@ void BackupView::SetupFolderView()
     _folderTreeModel = std::make_shared<QFileSystemModel>();
     ui->folderTreeControl->setModel(_folderTreeModel.get());
 
-    connect(ui->folderTreeControl->selectionModel(), SIGNAL(selectionChanged(const QItemSelection&, const QItemSelection&)), this, SLOT(CurrentFolderChanged(const QItemSelection&, const QItemSelection&)));
+    connect(ui->folderTreeControl->selectionModel(), SIGNAL(selectionChanged(const QItemSelection&, const QItemSelection&)), this,      SLOT(CurrentFolderChanged(const QItemSelection&, const QItemSelection&)));
 }
 
 void ListQMLMethods(QQuickItem* item)

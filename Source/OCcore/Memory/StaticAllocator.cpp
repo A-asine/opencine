@@ -31,6 +31,7 @@ void RawPoolAllocator::InitAllocator(unsigned int frameSize, unsigned int frameC
 {
     _chunkSize  = frameSize;
     _frameCount = frameCount; 
+    
     // allocating 512 MB space (approx) and also keeping it as multiple of frameSize.
     _mem = new uint8_t[SIZE_LIMIT - SIZE_LIMIT % _chunkSize];  
     
