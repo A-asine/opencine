@@ -22,7 +22,9 @@
     </widget>
    </item>
    <item>
-    <widget class="PlaybackSlider" name="widget_2" native="true"/>
+    <widget class="PlaybackSlider" name="widget_2" native="true">
+     <zorder>widget</zorder>
+    </widget>
    </item>
    <item>
     <widget class="QWidget" name="widget" native="true">

@@ -12,7 +12,6 @@
 
 #include "Presenters/ProcessingPresenter.h"
 #include "Views/ProcessingView.h"
-#include "AVIEncode/AVIContainer.h"
 
 #include "Log/Logger.h"
 #include <Image/FramePool.h>

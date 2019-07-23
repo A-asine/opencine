@@ -67,7 +67,7 @@ void ProcessingPresenter::Show()
     
     auto start = std::chrono::high_resolution_clock::now();
     
-    frameCount = poolAllocator->GetFrameCount();
+    unsigned int frameCount = poolAllocator->GetFrameCount();
     
     for(unsigned int frameNumber = 1; frameNumber <= frameCount; frameNumber++)
     {
@@ -88,23 +88,6 @@ void ProcessingPresenter::Show()
         OC_LOG_INFO("Processing finished");
     }  
    
-    FrameServe();	
-}
-
-void ProcessingPresenter::FrameServe()
-{
-    RawPoolAllocator* aviPoolAllocator = new RawPoolAllocator();
-    
-    provider->Load(_currentFilePath, FileFormat::Unknown, *_image.get(), *aviPoolAllocator);
-    
-    _avi = std::make_shared<AVIContainer>(_image->Width() / 2, _image->Height() / 2, 30, frameCount);
-    
-    for(unsigned int frameNumber = 1; frameNumber <= frameCount; frameNumber++)
-    { 
-        provider->ProcessFrame(frameNumber, *_image.get(), *aviPoolAllocator);
-        _avi->AddFrame(*_image.get());    
-    } 
-    
 }
 
 // TODO: Check how to remove allFormats, as it is used as workaround for filter selection in QFileDialog

@@ -110,6 +110,7 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/Source/OCui/)
 #add_subdirectory(${PROJECT_SOURCE_DIR}/Source/OCBackup/)
 add_subdirectory(${PROJECT_SOURCE_DIR}/Source/ProcessingTest/)
 add_subdirectory(${PROJECT_SOURCE_DIR}/Source/UnitTests/)
+add_subdirectory(${PROJECT_SOURCE_DIR}/Source/FrameServer)
 
 #add_subdirectory(${PROJECT_SOURCE_DIR}/Source/CinemaDNGDecoder/)
 #add_subdirectory(${PROJECT_SOURCE_DIR}/Source/CinemaDNGInfo/)
